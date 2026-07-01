@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Finance Tracker</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>My Finance Tracker</h1>
+    <p class="tagline">Everything lives in this browser — nothing is sent anywhere.</p>
+  </header>
+
+  <main>
+
+    <!-- Summary cards: balance, income, expenses -->
+    <section class="summary-grid" id="summary-grid">
+      <div class="card">
+        <h2>Balance</h2>
+        <p class="amount" id="balance-amount">$0.00</p>
+      </div>
+      <div class="card income">
+        <h2>Income</h2>
+        <p class="amount" id="income-amount">$0.00</p>
+      </div>
+      <div class="card expense">
+        <h2>Expenses</h2>
+        <p class="amount" id="expense-amount">$0.00</p>
+      </div>
+    </section>
+
+    <!-- Add a transaction by hand -->
+    <section class="card form-card">
+      <h2>Add a Transaction</h2>
+      <form id="transaction-form">
+        <div class="form-row">
+          <label>
+            Date
+            <input type="date" id="input-date" required />
+          </label>
+          <label>
+            Description
+            <input type="text" id="input-description" placeholder="e.g. Coffee" required />
+          </label>
+        </div>
+        <div class="form-row">
+          <label>
+            Amount
+            <input type="number" id="input-amount" step="0.01" min="0.01" placeholder="0.00" required />
+          </label>
+          <label>
+            Type
+            <select id="input-type">
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </label>
+          <label>
+            Category
+            <select id="input-category"></select>
+          </label>
+        </div>
+        <button type="submit">Add Transaction</button>
+      </form>
+    </section>
+
+    <!-- Import transactions from a bank CSV export -->
+    <section class="card">
+      <h2>Import from CSV</h2>
+      <p class="hint">
+        Export a transaction list from your bank as a CSV file, then upload it here.
+        We'll try to match columns for <strong>Date</strong>, <strong>Description</strong>, and <strong>Amount</strong> automatically.
+      </p>
+      <input type="file" id="csv-input" accept=".csv" />
+      <div id="csv-mapping" class="csv-mapping hidden">
+        <p>Match your file's columns to the right fields:</p>
+        <div class="form-row">
+          <label>Date column <select id="map-date"></select></label>
+          <label>Description column <select id="map-description"></select></label>
+          <label>Amount column <select id="map-amount"></select></label>
+        </div>
+        <button id="csv-confirm" type="button">Import Rows</button>
+      </div>
+      <p id="csv-status" class="hint"></p>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-grid">
+      <div class="card">
+        <h2>Spending by Category</h2>
+        <canvas id="category-chart"></canvas>
+      </div>
+      <div class="card">
+        <h2>Monthly Trend</h2>
+        <canvas id="trend-chart"></canvas>
+      </div>
+    </section>
+
+    <!-- Transaction list -->
+    <section class="card">
+      <div class="list-header">
+        <h2>Transactions</h2>
+        <select id="filter-category">
+          <option value="">All categories</option>
+        </select>
+      </div>
+      <table id="transactions-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th class="amount-col">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="transactions-body"></tbody>
+      </table>
+      <p id="empty-state" class="hint">No transactions yet — add one above or import a CSV.</p>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
