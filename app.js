@@ -12,6 +12,29 @@ const CATEGORIES = [
   "Entertainment", "Health", "Shopping", "Dining Out", "Other",
 ];
 
+// Keywords are matched case-insensitively against the transaction description.
+// First category with a matching keyword wins.
+const CATEGORY_KEYWORDS = {
+  "Income": ["payroll", "paycheck", "salary", "direct dep"],
+  "Housing": ["rent", "mortgage", "hoa"],
+  "Groceries": ["grocery", "groceries", "whole foods", "trader joe", "safeway", "kroger", "supermarket"],
+  "Transport": ["uber", "lyft", "gas station", "shell", "chevron", "exxon", "parking", "transit"],
+  "Utilities": ["electric", "power co", "water bill", "internet", "comcast", "verizon", "at&t"],
+  "Entertainment": ["netflix", "spotify", "hulu", "disney+", "cinema", "movie"],
+  "Health": ["pharmacy", "cvs", "walgreens", "doctor", "clinic", "dental"],
+  "Shopping": ["amazon", "target", "walmart", "mall"],
+  "Dining Out": ["restaurant", "cafe", "coffee", "starbucks", "doordash", "uber eats", "grubhub", "pizza"],
+};
+
+function guessCategory(description) {
+  const text = description.toLowerCase();
+  for (const category of CATEGORIES) {
+    const keywords = CATEGORY_KEYWORDS[category];
+    if (keywords && keywords.some(k => text.includes(k))) return category;
+  }
+  return "Other";
+}
+
 function loadTransactions() {
   const raw = localStorage.getItem(STORAGE_KEY);
   return raw ? JSON.parse(raw) : [];
@@ -98,7 +121,10 @@ function renderTable() {
       <td class="amount-col ${t.type === "income" ? "row-income" : "row-expense"}">
         ${t.type === "income" ? "+" : "-"}${money(t.amount)}
       </td>
-      <td><button class="delete-btn" data-id="${t.id}" title="Delete">✕</button></td>
+      <td class="row-actions">
+        <button class="edit-btn" data-id="${t.id}" title="Edit">✎</button>
+        <button class="delete-btn" data-id="${t.id}" title="Delete">✕</button>
+      </td>
     </tr>
   `).join("");
 }
@@ -110,11 +136,19 @@ function escapeHtml(str) {
 }
 
 tableBody.addEventListener("click", (e) => {
-  const btn = e.target.closest(".delete-btn");
-  if (!btn) return;
-  transactions = transactions.filter(t => t.id !== btn.dataset.id);
-  saveTransactions(transactions);
-  renderAll();
+  const deleteBtn = e.target.closest(".delete-btn");
+  if (deleteBtn) {
+    transactions = transactions.filter(t => t.id !== deleteBtn.dataset.id);
+    saveTransactions(transactions);
+    if (editingId === deleteBtn.dataset.id) exitEditMode();
+    renderAll();
+    return;
+  }
+
+  const editBtn = e.target.closest(".edit-btn");
+  if (editBtn) {
+    enterEditMode(editBtn.dataset.id);
+  }
 });
 
 filterCategorySelect.addEventListener("change", renderTable);
@@ -199,19 +233,66 @@ function renderAll() {
 }
 
 // ---------------------------------------------------------------------------
-// Manual add-transaction form
+// Manual add/edit transaction form
 // ---------------------------------------------------------------------------
+
+const formHeading = document.getElementById("form-heading");
+const submitBtn = document.getElementById("form-submit-btn");
+const cancelBtn = document.getElementById("form-cancel-btn");
+const dateInput = document.getElementById("input-date");
+const descriptionInput = document.getElementById("input-description");
+const amountInput = document.getElementById("input-amount");
+const typeInput = document.getElementById("input-type");
+
+let editingId = null; // id of the transaction currently being edited, or null
+
+function enterEditMode(id) {
+  const t = transactions.find(t => t.id === id);
+  if (!t) return;
+
+  editingId = id;
+  dateInput.value = t.date;
+  descriptionInput.value = t.description;
+  amountInput.value = t.amount;
+  typeInput.value = t.type;
+  categorySelect.value = t.category;
+
+  formHeading.textContent = "Edit Transaction";
+  submitBtn.textContent = "Save Changes";
+  cancelBtn.classList.remove("hidden");
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function exitEditMode() {
+  editingId = null;
+  formHeading.textContent = "Add a Transaction";
+  submitBtn.textContent = "Add Transaction";
+  cancelBtn.classList.add("hidden");
+  form.reset();
+  dateInput.value = new Date().toISOString().slice(0, 10);
+}
+
+cancelBtn.addEventListener("click", exitEditMode);
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
 
-  const date = document.getElementById("input-date").value;
-  const description = document.getElementById("input-description").value.trim();
-  const amount = parseFloat(document.getElementById("input-amount").value);
-  const type = document.getElementById("input-type").value;
-  const category = document.getElementById("input-category").value;
+  const date = dateInput.value;
+  const description = descriptionInput.value.trim();
+  const amount = parseFloat(amountInput.value);
+  const type = typeInput.value;
+  const category = categorySelect.value;
 
   if (!date || !description || !amount) return;
+
+  if (editingId) {
+    const t = transactions.find(t => t.id === editingId);
+    Object.assign(t, { date, description, category, type, amount });
+    saveTransactions(transactions);
+    renderAll();
+    exitEditMode();
+    return;
+  }
 
   transactions.push({
     id: crypto.randomUUID(),
@@ -221,7 +302,7 @@ form.addEventListener("submit", (e) => {
   saveTransactions(transactions);
   renderAll();
   form.reset();
-  document.getElementById("input-date").value = date; // keep the date for quick multi-entry
+  dateInput.value = date; // keep the date for quick multi-entry
 });
 
 // ---------------------------------------------------------------------------
@@ -271,16 +352,21 @@ csvConfirmBtn.addEventListener("click", () => {
   const amountCol = mapAmount.value;
 
   let imported = 0;
+  let autoCategorized = 0;
   parsedCsvRows.forEach(row => {
     const rawAmount = parseFloat(String(row[amountCol]).replace(/[^0-9.-]/g, ""));
     const date = normalizeDate(row[dateCol]);
     if (!date || isNaN(rawAmount) || rawAmount === 0) return;
 
+    const description = row[descCol] || "(no description)";
+    const category = guessCategory(description);
+    if (category !== "Other") autoCategorized++;
+
     transactions.push({
       id: crypto.randomUUID(),
       date,
-      description: row[descCol] || "(no description)",
-      category: "Other",
+      description,
+      category,
       type: rawAmount < 0 ? "expense" : "income",
       amount: Math.abs(rawAmount),
     });
@@ -290,7 +376,7 @@ csvConfirmBtn.addEventListener("click", () => {
   saveTransactions(transactions);
   renderAll();
 
-  csvStatus.textContent = `Imported ${imported} transaction${imported === 1 ? "" : "s"}. New rows are categorized "Other" — edit them by deleting and re-adding, or just leave as-is.`;
+  csvStatus.textContent = `Imported ${imported} transaction${imported === 1 ? "" : "s"}, auto-categorized ${autoCategorized} of them. Click the ✎ on any row to fix a category by hand.`;
   csvMapping.classList.add("hidden");
   parsedCsvRows = null;
   csvInput.value = "";

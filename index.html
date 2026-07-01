@@ -33,7 +33,7 @@
 
     <!-- Add a transaction by hand -->
     <section class="card form-card">
-      <h2>Add a Transaction</h2>
+      <h2 id="form-heading">Add a Transaction</h2>
       <form id="transaction-form">
         <div class="form-row">
           <label>
@@ -62,7 +62,10 @@
             <select id="input-category"></select>
           </label>
         </div>
-        <button type="submit">Add Transaction</button>
+        <div class="form-row">
+          <button type="submit" id="form-submit-btn">Add Transaction</button>
+          <button type="button" id="form-cancel-btn" class="secondary hidden">Cancel</button>
+        </div>
       </form>
     </section>
 
