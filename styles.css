@@ -1,6 +1,7 @@
 :root {
   --bg: #0f1115;
   --card-bg: #1a1d24;
+  --input-bg: #12141a;
   --text: #e8e9ec;
   --muted: #9aa0ac;
   --border: #2a2e37;
@@ -8,6 +9,17 @@
   --income: #3ecf8e;
   --expense: #f0616a;
   --radius: 10px;
+}
+
+[data-theme="light"] {
+  --bg: #f4f5f7;
+  --card-bg: #ffffff;
+  --input-bg: #f7f8fa;
+  --text: #1a1d24;
+  --muted: #6b7280;
+  --border: #dde1e7;
+  --income: #1f9d68;
+  --expense: #d33f49;
 }
 
 * { box-sizing: border-box; }
@@ -21,11 +33,48 @@ body {
 
 .app-header {
   padding: 24px 32px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .app-header h1 { margin: 0 0 4px; }
 
 .tagline { color: var(--muted); margin: 0; font-size: 0.9rem; }
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+#theme-toggle {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.accent-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.accent-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.accent-swatch.active {
+  border-color: var(--text);
+}
 
 main {
   max-width: 960px;
@@ -77,7 +126,7 @@ input, select, button {
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  background: #12141a;
+  background: var(--input-bg);
   color: var(--text);
 }
 
@@ -147,7 +196,7 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
 }
 
 .budget-bar {
-  background: #12141a;
+  background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   height: 10px;

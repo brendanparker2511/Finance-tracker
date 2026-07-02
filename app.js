@@ -71,6 +71,10 @@ const tableBody = document.getElementById("transactions-body");
 const emptyState = document.getElementById("empty-state");
 const budgetsBody = document.getElementById("budgets-body");
 const budgetMonthLabel = document.getElementById("budget-month-label");
+const trajectoryHint = document.getElementById("trajectory-hint");
+
+const themeToggleBtn = document.getElementById("theme-toggle");
+const accentPicker = document.getElementById("accent-picker");
 
 const csvInput = document.getElementById("csv-input");
 const csvMapping = document.getElementById("csv-mapping");
@@ -81,6 +85,44 @@ const mapAmount = document.getElementById("map-amount");
 const csvConfirmBtn = document.getElementById("csv-confirm");
 
 let parsedCsvRows = null; // rows waiting on column mapping before import
+
+// ---------------------------------------------------------------------------
+// Theme + accent color
+// ---------------------------------------------------------------------------
+
+const THEME_KEY = "finance-tracker-theme";
+const ACCENT_KEY = "finance-tracker-accent";
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  themeToggleBtn.textContent = theme === "light" ? "☀️" : "🌙";
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function applyAccent(color) {
+  document.documentElement.style.setProperty("--accent", color);
+  localStorage.setItem(ACCENT_KEY, color);
+  document.querySelectorAll(".accent-swatch").forEach(el => {
+    el.classList.toggle("active", el.dataset.color === color);
+  });
+}
+
+themeToggleBtn.addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  applyTheme(next);
+  renderAll(); // charts read colors from CSS variables, so they need a fresh render
+});
+
+accentPicker.addEventListener("click", (e) => {
+  const btn = e.target.closest(".accent-swatch");
+  if (!btn) return;
+  applyAccent(btn.dataset.color);
+  renderAll();
+});
 
 // ---------------------------------------------------------------------------
 // Category dropdowns
@@ -232,10 +274,12 @@ filterCategorySelect.addEventListener("change", renderTable);
 
 let categoryChart = null;
 let trendChart = null;
+let trajectoryChart = null;
 
 function renderCharts() {
   renderCategoryChart();
   renderTrendChart();
+  renderTrajectoryChart();
 }
 
 function renderCategoryChart() {
@@ -254,7 +298,7 @@ function renderCategoryChart() {
       labels,
       datasets: [{ data, backgroundColor: chartColors(labels.length) }],
     },
-    options: { plugins: { legend: { position: "bottom", labels: { color: "#e8e9ec" } } } },
+    options: { plugins: { legend: { position: "bottom", labels: { color: cssVar("--text") } } } },
   });
 }
 
@@ -276,18 +320,93 @@ function renderTrendChart() {
     data: {
       labels,
       datasets: [
-        { label: "Income", data: income, backgroundColor: "#3ecf8e" },
-        { label: "Expenses", data: expense, backgroundColor: "#f0616a" },
+        { label: "Income", data: income, backgroundColor: cssVar("--income") },
+        { label: "Expenses", data: expense, backgroundColor: cssVar("--expense") },
       ],
     },
     options: {
       scales: {
-        x: { ticks: { color: "#9aa0ac" }, grid: { color: "#2a2e37" } },
-        y: { ticks: { color: "#9aa0ac" }, grid: { color: "#2a2e37" } },
+        x: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+        y: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
       },
-      plugins: { legend: { labels: { color: "#e8e9ec" } } },
+      plugins: { legend: { labels: { color: cssVar("--text") } } },
     },
   });
+}
+
+// Projects future balance by assuming the average net (income - expense) from
+// recent months continues going forward.
+function renderTrajectoryChart() {
+  const monthlyNet = {}; // "2026-07" -> income minus expenses that month
+  transactions.forEach(t => {
+    const month = t.date.slice(0, 7);
+    monthlyNet[month] = (monthlyNet[month] || 0) + (t.type === "income" ? t.amount : -t.amount);
+  });
+
+  const months = Object.keys(monthlyNet).sort();
+
+  if (trajectoryChart) trajectoryChart.destroy();
+
+  if (months.length === 0) {
+    trajectoryHint.textContent = "Add some transactions to see your projected savings trajectory.";
+    trajectoryChart = null;
+    return;
+  }
+
+  let running = 0;
+  const actualBalances = months.map(m => (running += monthlyNet[m]));
+
+  const recentMonths = months.slice(-6);
+  const avgNet = recentMonths.reduce((sum, m) => sum + monthlyNet[m], 0) / recentMonths.length;
+
+  const PROJECTION_MONTHS = 6;
+  const futureMonths = [];
+  let [year, month] = months[months.length - 1].split("-").map(Number);
+  for (let i = 0; i < PROJECTION_MONTHS; i++) {
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+    futureMonths.push(`${year}-${String(month).padStart(2, "0")}`);
+  }
+
+  let projected = actualBalances[actualBalances.length - 1];
+  const projectedBalances = futureMonths.map(() => (projected += avgNet));
+
+  const labels = [...months, ...futureMonths];
+  const actualData = [...actualBalances, ...Array(PROJECTION_MONTHS).fill(null)];
+  const projectedData = [
+    ...Array(months.length - 1).fill(null),
+    actualBalances[actualBalances.length - 1],
+    ...projectedBalances,
+  ];
+
+  const finalProjected = projectedBalances[projectedBalances.length - 1];
+  const lastLabel = formatMonthLabel(futureMonths[futureMonths.length - 1]);
+  trajectoryHint.textContent = avgNet >= 0
+    ? `Averaging ${money(avgNet)}/month saved over the last ${recentMonths.length} month${recentMonths.length === 1 ? "" : "s"} — projected to reach ${money(finalProjected)} by ${lastLabel}.`
+    : `Averaging ${money(avgNet)}/month over the last ${recentMonths.length} month${recentMonths.length === 1 ? "" : "s"} (spending more than earning) — projected ${money(finalProjected)} by ${lastLabel}.`;
+
+  trajectoryChart = new Chart(document.getElementById("trajectory-chart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Actual balance", data: actualData, borderColor: cssVar("--accent"), backgroundColor: "transparent", tension: 0.2 },
+        { label: "Projected", data: projectedData, borderColor: cssVar("--muted"), borderDash: [6, 4], backgroundColor: "transparent", tension: 0.2 },
+      ],
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+        y: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+      },
+      plugins: { legend: { labels: { color: cssVar("--text") } } },
+    },
+  });
+}
+
+function formatMonthLabel(yyyyMm) {
+  const [year, month] = yyyyMm.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "short", year: "numeric" });
 }
 
 function chartColors(n) {
@@ -467,6 +586,8 @@ function normalizeDate(value) {
 // Startup
 // ---------------------------------------------------------------------------
 
+applyTheme(localStorage.getItem(THEME_KEY) || "dark");
+applyAccent(localStorage.getItem(ACCENT_KEY) || "#5b8def");
 populateCategoryDropdowns();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
 renderAll();

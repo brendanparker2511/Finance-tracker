@@ -9,8 +9,20 @@
 <body>
 
   <header class="app-header">
-    <h1>My Finance Tracker</h1>
-    <p class="tagline">Everything lives in this browser — nothing is sent anywhere.</p>
+    <div>
+      <h1>My Finance Tracker</h1>
+      <p class="tagline">Everything lives in this browser — nothing is sent anywhere.</p>
+    </div>
+    <div class="header-controls">
+      <div class="accent-picker" id="accent-picker">
+        <button class="accent-swatch" data-color="#5b8def" style="background:#5b8def" title="Blue"></button>
+        <button class="accent-swatch" data-color="#a78bfa" style="background:#a78bfa" title="Purple"></button>
+        <button class="accent-swatch" data-color="#3ecf8e" style="background:#3ecf8e" title="Green"></button>
+        <button class="accent-swatch" data-color="#fb923c" style="background:#fb923c" title="Orange"></button>
+        <button class="accent-swatch" data-color="#e879f9" style="background:#e879f9" title="Pink"></button>
+      </div>
+      <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
+    </div>
   </header>
 
   <main>
@@ -99,6 +111,13 @@
         <h2>Monthly Trend</h2>
         <canvas id="trend-chart"></canvas>
       </div>
+    </section>
+
+    <!-- Savings trajectory -->
+    <section class="card">
+      <h2>Savings Trajectory</h2>
+      <p class="hint" id="trajectory-hint"></p>
+      <canvas id="trajectory-chart"></canvas>
     </section>
 
     <!-- Monthly budgets -->
