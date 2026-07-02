@@ -120,6 +120,63 @@
       <canvas id="trajectory-chart"></canvas>
     </section>
 
+    <!-- Investments / net worth -->
+    <section class="card">
+      <h2>Investments</h2>
+      <p class="hint">
+        Log periodic balance snapshots for your investment accounts (e.g. IBKR, 401k) by hand
+        to track them alongside your cash balance. No account connection required.
+      </p>
+
+      <form id="investment-form">
+        <div class="form-row">
+          <label>
+            Date
+            <input type="date" id="investment-date" required />
+          </label>
+          <label>
+            Account
+            <input type="text" id="investment-account" placeholder="e.g. IBKR" required />
+          </label>
+          <label>
+            Balance
+            <input type="number" id="investment-balance" step="0.01" min="0" placeholder="0.00" required />
+          </label>
+        </div>
+        <button type="submit">Add Snapshot</button>
+      </form>
+
+      <div class="networth-summary">
+        <div>
+          <span class="hint">Cash Balance</span>
+          <p class="amount" id="networth-cash">$0.00</p>
+        </div>
+        <div>
+          <span class="hint">Investments</span>
+          <p class="amount" id="networth-investments">$0.00</p>
+        </div>
+        <div>
+          <span class="hint">Net Worth</span>
+          <p class="amount" id="networth-total">$0.00</p>
+        </div>
+      </div>
+
+      <canvas id="investment-chart"></canvas>
+
+      <table id="investments-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Account</th>
+            <th class="amount-col">Balance</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="investments-body"></tbody>
+      </table>
+      <p id="investments-empty" class="hint">No snapshots yet — log your first balance above.</p>
+    </section>
+
     <!-- Monthly budgets -->
     <section class="card">
       <h2>Monthly Budgets</h2>

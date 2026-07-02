@@ -7,6 +7,7 @@
 
 const STORAGE_KEY = "finance-tracker-transactions";
 const BUDGET_KEY = "finance-tracker-budgets";
+const INVESTMENTS_KEY = "finance-tracker-investments";
 
 const CATEGORIES = [
   "Income", "Housing", "Groceries", "Transport", "Utilities",
@@ -54,8 +55,18 @@ function saveBudgets(budgets) {
   localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets));
 }
 
+function loadInvestments() {
+  const raw = localStorage.getItem(INVESTMENTS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveInvestments(investments) {
+  localStorage.setItem(INVESTMENTS_KEY, JSON.stringify(investments));
+}
+
 let transactions = loadTransactions();
 let budgets = loadBudgets(); // { categoryName: monthlyLimit }
+let investments = loadInvestments(); // [{ id, date, accountName, balance }]
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -72,6 +83,16 @@ const emptyState = document.getElementById("empty-state");
 const budgetsBody = document.getElementById("budgets-body");
 const budgetMonthLabel = document.getElementById("budget-month-label");
 const trajectoryHint = document.getElementById("trajectory-hint");
+
+const investmentForm = document.getElementById("investment-form");
+const investmentDateInput = document.getElementById("investment-date");
+const investmentAccountInput = document.getElementById("investment-account");
+const investmentBalanceInput = document.getElementById("investment-balance");
+const investmentsBody = document.getElementById("investments-body");
+const investmentsEmpty = document.getElementById("investments-empty");
+const networthCashEl = document.getElementById("networth-cash");
+const networthInvestmentsEl = document.getElementById("networth-investments");
+const networthTotalEl = document.getElementById("networth-total");
 
 const themeToggleBtn = document.getElementById("theme-toggle");
 const accentPicker = document.getElementById("accent-picker");
@@ -147,6 +168,12 @@ function money(n) {
 // Rendering: summary cards
 // ---------------------------------------------------------------------------
 
+function cashBalance() {
+  const income = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+  const expense = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+  return income - expense;
+}
+
 function renderSummary() {
   const income = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
   const expense = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
@@ -214,6 +241,122 @@ budgetsBody.addEventListener("change", (e) => {
   saveBudgets(budgets);
   renderBudgets();
 });
+
+// ---------------------------------------------------------------------------
+// Rendering: investments / net worth
+// ---------------------------------------------------------------------------
+
+// The latest logged balance for each account, as of its most recent snapshot.
+function latestBalancePerAccount() {
+  const latest = {}; // accountName -> { date, balance }
+  investments.forEach(s => {
+    const current = latest[s.accountName];
+    if (!current || s.date >= current.date) latest[s.accountName] = { date: s.date, balance: s.balance };
+  });
+  return latest;
+}
+
+function totalInvestments() {
+  const latest = latestBalancePerAccount();
+  return Object.values(latest).reduce((sum, a) => sum + a.balance, 0);
+}
+
+function renderNetWorthSummary() {
+  const cash = cashBalance();
+  const investmentsTotal = totalInvestments();
+  networthCashEl.textContent = money(cash);
+  networthInvestmentsEl.textContent = money(investmentsTotal);
+  networthTotalEl.textContent = money(cash + investmentsTotal);
+}
+
+function renderInvestmentsTable() {
+  const rows = investments.slice().sort((a, b) => b.date.localeCompare(a.date));
+  investmentsEmpty.classList.toggle("hidden", investments.length > 0);
+
+  investmentsBody.innerHTML = rows.map(s => `
+    <tr>
+      <td>${s.date}</td>
+      <td>${escapeHtml(s.accountName)}</td>
+      <td class="amount-col">${money(s.balance)}</td>
+      <td class="row-actions">
+        <button class="delete-investment-btn" data-id="${s.id}" title="Delete">✕</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+investmentsBody.addEventListener("click", (e) => {
+  const btn = e.target.closest(".delete-investment-btn");
+  if (!btn) return;
+  investments = investments.filter(s => s.id !== btn.dataset.id);
+  saveInvestments(investments);
+  renderInvestments();
+});
+
+investmentForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const date = investmentDateInput.value;
+  const accountName = investmentAccountInput.value.trim();
+  const balance = parseFloat(investmentBalanceInput.value);
+
+  if (!date || !accountName || isNaN(balance)) return;
+
+  investments.push({ id: crypto.randomUUID(), date, accountName, balance });
+  saveInvestments(investments);
+  renderInvestments();
+
+  investmentForm.reset();
+  investmentDateInput.value = date;
+});
+
+let investmentChart = null;
+
+function renderInvestmentChart() {
+  const dates = [...new Set(investments.map(s => s.date))].sort();
+  const accounts = [...new Set(investments.map(s => s.accountName))];
+
+  if (investmentChart) investmentChart.destroy();
+
+  if (dates.length === 0) {
+    investmentChart = null;
+    return;
+  }
+
+  // For each date, sum each account's latest known balance as of that date
+  // (accounts don't necessarily get a snapshot on every date).
+  const totals = dates.map(date => {
+    let total = 0;
+    accounts.forEach(account => {
+      const upToDate = investments
+        .filter(s => s.accountName === account && s.date <= date)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      if (upToDate.length) total += upToDate[upToDate.length - 1].balance;
+    });
+    return total;
+  });
+
+  investmentChart = new Chart(document.getElementById("investment-chart"), {
+    type: "line",
+    data: {
+      labels: dates,
+      datasets: [{ label: "Total investments", data: totals, borderColor: cssVar("--accent"), backgroundColor: "transparent", tension: 0.2 }],
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+        y: { ticks: { color: cssVar("--muted") }, grid: { color: cssVar("--border") } },
+      },
+      plugins: { legend: { labels: { color: cssVar("--text") } } },
+    },
+  });
+}
+
+function renderInvestments() {
+  renderNetWorthSummary();
+  renderInvestmentsTable();
+  renderInvestmentChart();
+}
 
 // ---------------------------------------------------------------------------
 // Rendering: transactions table
@@ -423,6 +566,7 @@ function renderAll() {
   renderTable();
   renderCharts();
   renderBudgets();
+  renderInvestments();
 }
 
 // ---------------------------------------------------------------------------
@@ -590,4 +734,5 @@ applyTheme(localStorage.getItem(THEME_KEY) || "dark");
 applyAccent(localStorage.getItem(ACCENT_KEY) || "#5b8def");
 populateCategoryDropdowns();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
+investmentDateInput.value = new Date().toISOString().slice(0, 10);
 renderAll();

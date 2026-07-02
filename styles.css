@@ -191,6 +191,17 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
 .row-income { color: var(--income); }
 .row-expense { color: var(--expense); }
 
+.networth-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.networth-summary .amount { font-size: 1.4rem; font-weight: 700; margin: 4px 0 0; }
+
+#investment-chart { margin-bottom: 12px; }
+
 .budget-input {
   width: 90px;
 }
@@ -225,6 +236,6 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
 .delete-btn:hover { color: var(--expense); }
 
 @media (max-width: 640px) {
-  .summary-grid, .charts-grid { grid-template-columns: 1fr; }
+  .summary-grid, .charts-grid, .networth-summary { grid-template-columns: 1fr; }
   main { padding: 16px; }
 }
