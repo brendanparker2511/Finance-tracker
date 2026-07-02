@@ -8,216 +8,366 @@
 </head>
 <body>
 
-  <header class="app-header">
-    <div>
-      <h1>My Finance Tracker</h1>
-      <p class="tagline">Everything lives in this browser — nothing is sent anywhere.</p>
-    </div>
-    <div class="header-controls">
-      <div class="accent-picker" id="accent-picker">
-        <button class="accent-swatch" data-color="#5b8def" style="background:#5b8def" title="Blue"></button>
-        <button class="accent-swatch" data-color="#a78bfa" style="background:#a78bfa" title="Purple"></button>
-        <button class="accent-swatch" data-color="#3ecf8e" style="background:#3ecf8e" title="Green"></button>
-        <button class="accent-swatch" data-color="#fb923c" style="background:#fb923c" title="Orange"></button>
-        <button class="accent-swatch" data-color="#e879f9" style="background:#e879f9" title="Pink"></button>
-      </div>
-      <button id="theme-toggle" title="Toggle light/dark mode">🌙</button>
-    </div>
-  </header>
+  <div class="app-shell">
 
-  <main>
-
-    <!-- Summary cards: balance, income, expenses -->
-    <section class="summary-grid" id="summary-grid">
-      <div class="card">
-        <h2>Balance</h2>
-        <p class="amount" id="balance-amount">$0.00</p>
-      </div>
-      <div class="card income">
-        <h2>Income</h2>
-        <p class="amount" id="income-amount">$0.00</p>
-      </div>
-      <div class="card expense">
-        <h2>Expenses</h2>
-        <p class="amount" id="expense-amount">$0.00</p>
-      </div>
-    </section>
-
-    <!-- Add a transaction by hand -->
-    <section class="card form-card">
-      <h2 id="form-heading">Add a Transaction</h2>
-      <form id="transaction-form">
-        <div class="form-row">
-          <label>
-            Date
-            <input type="date" id="input-date" required />
-          </label>
-          <label>
-            Description
-            <input type="text" id="input-description" placeholder="e.g. Coffee" required />
-          </label>
-        </div>
-        <div class="form-row">
-          <label>
-            Amount
-            <input type="number" id="input-amount" step="0.01" min="0.01" placeholder="0.00" required />
-          </label>
-          <label>
-            Type
-            <select id="input-type">
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
-          </label>
-          <label>
-            Category
-            <select id="input-category"></select>
-          </label>
-        </div>
-        <div class="form-row">
-          <button type="submit" id="form-submit-btn">Add Transaction</button>
-          <button type="button" id="form-cancel-btn" class="secondary hidden">Cancel</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- Import transactions from a bank CSV export -->
-    <section class="card">
-      <h2>Import from CSV</h2>
-      <p class="hint">
-        Export a transaction list from your bank as a CSV file, then upload it here.
-        We'll try to match columns for <strong>Date</strong>, <strong>Description</strong>, and <strong>Amount</strong> automatically.
-      </p>
-      <input type="file" id="csv-input" accept=".csv" />
-      <div id="csv-mapping" class="csv-mapping hidden">
-        <p>Match your file's columns to the right fields:</p>
-        <div class="form-row">
-          <label>Date column <select id="map-date"></select></label>
-          <label>Description column <select id="map-description"></select></label>
-          <label>Amount column <select id="map-amount"></select></label>
-        </div>
-        <button id="csv-confirm" type="button">Import Rows</button>
-      </div>
-      <p id="csv-status" class="hint"></p>
-    </section>
-
-    <!-- Charts -->
-    <section class="charts-grid">
-      <div class="card">
-        <h2>Spending by Category</h2>
-        <canvas id="category-chart"></canvas>
-      </div>
-      <div class="card">
-        <h2>Monthly Trend</h2>
-        <canvas id="trend-chart"></canvas>
-      </div>
-    </section>
-
-    <!-- Savings trajectory -->
-    <section class="card">
-      <h2>Savings Trajectory</h2>
-      <p class="hint" id="trajectory-hint"></p>
-      <canvas id="trajectory-chart"></canvas>
-    </section>
-
-    <!-- Investments / net worth -->
-    <section class="card">
-      <h2>Investments</h2>
-      <p class="hint">
-        Log periodic balance snapshots for your investment accounts (e.g. IBKR, 401k) by hand
-        to track them alongside your cash balance. No account connection required.
-      </p>
-
-      <form id="investment-form">
-        <div class="form-row">
-          <label>
-            Date
-            <input type="date" id="investment-date" required />
-          </label>
-          <label>
-            Account
-            <input type="text" id="investment-account" placeholder="e.g. IBKR" required />
-          </label>
-          <label>
-            Balance
-            <input type="number" id="investment-balance" step="0.01" min="0" placeholder="0.00" required />
-          </label>
-        </div>
-        <button type="submit">Add Snapshot</button>
-      </form>
-
-      <div class="networth-summary">
+    <!-- Sidebar navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="sidebar-logo">💰</span>
         <div>
-          <span class="hint">Cash Balance</span>
-          <p class="amount" id="networth-cash">$0.00</p>
+          <h1>My Finance Tracker</h1>
+          <p class="tagline">Runs in your browser only</p>
         </div>
-        <div>
-          <span class="hint">Investments</span>
-          <p class="amount" id="networth-investments">$0.00</p>
-        </div>
-        <div>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav">
+        <button class="nav-item active" data-page="dashboard">📊 <span>Dashboard</span></button>
+        <button class="nav-item" data-page="transactions">💳 <span>Transactions</span></button>
+        <button class="nav-item" data-page="budgets">📅 <span>Budgets</span></button>
+        <button class="nav-item" data-page="investments">📈 <span>Investments</span></button>
+        <button class="nav-item" data-page="bills">🧾 <span>Bills</span></button>
+        <button class="nav-item" data-page="settings">⚙️ <span>Settings</span></button>
+      </nav>
+    </aside>
+
+    <main class="page-content">
+
+      <!-- ================= DASHBOARD ================= -->
+      <section class="page active" id="page-dashboard">
+        <h1 class="page-title">Dashboard</h1>
+
+        <div class="card networth-hero">
           <span class="hint">Net Worth</span>
-          <p class="amount" id="networth-total">$0.00</p>
+          <p class="amount hero-amount" id="dashboard-networth">$0.00</p>
         </div>
-      </div>
 
-      <canvas id="investment-chart"></canvas>
+        <section class="summary-grid" id="summary-grid">
+          <div class="card">
+            <h2>Cash Balance</h2>
+            <p class="amount" id="balance-amount">$0.00</p>
+          </div>
+          <div class="card income">
+            <h2>Income</h2>
+            <p class="amount" id="income-amount">$0.00</p>
+          </div>
+          <div class="card expense">
+            <h2>Expenses</h2>
+            <p class="amount" id="expense-amount">$0.00</p>
+          </div>
+        </section>
 
-      <table id="investments-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Account</th>
-            <th class="amount-col">Balance</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="investments-body"></tbody>
-      </table>
-      <p id="investments-empty" class="hint">No snapshots yet — log your first balance above.</p>
-    </section>
+        <section class="charts-grid">
+          <div class="card">
+            <h2>Spending by Category</h2>
+            <canvas id="category-chart"></canvas>
+          </div>
+          <div class="card">
+            <h2>Monthly Trend</h2>
+            <canvas id="trend-chart"></canvas>
+          </div>
+        </section>
 
-    <!-- Monthly budgets -->
-    <section class="card">
-      <h2>Monthly Budgets</h2>
-      <p class="hint">Set a spending limit per category to track against <span id="budget-month-label"></span>'s expenses. Leave blank for no limit.</p>
-      <table id="budgets-table">
-        <thead>
-          <tr>
-            <th>Category</th>
-            <th>Budget</th>
-            <th class="amount-col">Spent</th>
-            <th>Progress</th>
-          </tr>
-        </thead>
-        <tbody id="budgets-body"></tbody>
-      </table>
-    </section>
+        <section class="card">
+          <h2>Savings Trajectory</h2>
+          <p class="hint" id="trajectory-hint"></p>
+          <canvas id="trajectory-chart"></canvas>
+        </section>
 
-    <!-- Transaction list -->
-    <section class="card">
-      <div class="list-header">
-        <h2>Transactions</h2>
-        <select id="filter-category">
-          <option value="">All categories</option>
-        </select>
-      </div>
-      <table id="transactions-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Description</th>
-            <th>Category</th>
-            <th class="amount-col">Amount</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="transactions-body"></tbody>
-      </table>
-      <p id="empty-state" class="hint">No transactions yet — add one above or import a CSV.</p>
-    </section>
+        <section class="charts-grid">
+          <div class="card">
+            <h2>Upcoming Bills</h2>
+            <ul class="mini-list" id="dashboard-upcoming-bills"></ul>
+            <p class="hint hidden" id="dashboard-bills-empty">No bills logged yet — add one on the Bills page.</p>
+          </div>
+          <div class="card">
+            <h2>Recent Transactions</h2>
+            <ul class="mini-list" id="dashboard-recent-transactions"></ul>
+            <p class="hint hidden" id="dashboard-transactions-empty">No transactions yet.</p>
+          </div>
+        </section>
+      </section>
 
-  </main>
+      <!-- ================= TRANSACTIONS ================= -->
+      <section class="page" id="page-transactions">
+        <h1 class="page-title">Transactions</h1>
+
+        <!-- Add a transaction by hand -->
+        <section class="card form-card">
+          <h2 id="form-heading">Add a Transaction</h2>
+          <form id="transaction-form">
+            <div class="form-row">
+              <label>
+                Date
+                <input type="date" id="input-date" required />
+              </label>
+              <label>
+                Description
+                <input type="text" id="input-description" placeholder="e.g. Coffee" required />
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                Amount
+                <input type="number" id="input-amount" step="0.01" min="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Type
+                <select id="input-type">
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <select id="input-category"></select>
+              </label>
+            </div>
+            <div class="form-row">
+              <button type="submit" id="form-submit-btn">Add Transaction</button>
+              <button type="button" id="form-cancel-btn" class="secondary hidden">Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Import transactions from a bank CSV export -->
+        <section class="card">
+          <h2>Import from CSV</h2>
+          <p class="hint">
+            Export a transaction list from your bank as a CSV file, then upload it here.
+            We'll try to match columns for <strong>Date</strong>, <strong>Description</strong>, and <strong>Amount</strong> automatically.
+          </p>
+          <input type="file" id="csv-input" accept=".csv" />
+          <div id="csv-mapping" class="csv-mapping hidden">
+            <p>Match your file's columns to the right fields:</p>
+            <div class="form-row">
+              <label>Date column <select id="map-date"></select></label>
+              <label>Description column <select id="map-description"></select></label>
+              <label>Amount column <select id="map-amount"></select></label>
+            </div>
+            <button id="csv-confirm" type="button">Import Rows</button>
+          </div>
+          <p id="csv-status" class="hint"></p>
+        </section>
+
+        <!-- Transaction list -->
+        <section class="card">
+          <div class="list-header">
+            <h2>All Transactions</h2>
+            <select id="filter-category">
+              <option value="">All categories</option>
+            </select>
+          </div>
+          <table id="transactions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th class="amount-col">Amount</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="transactions-body"></tbody>
+          </table>
+          <p id="empty-state" class="hint">No transactions yet — add one above or import a CSV.</p>
+        </section>
+      </section>
+
+      <!-- ================= BUDGETS ================= -->
+      <section class="page" id="page-budgets">
+        <h1 class="page-title">Budgets</h1>
+        <section class="card">
+          <h2>Monthly Budgets</h2>
+          <p class="hint">Set a spending limit per category to track against <span id="budget-month-label"></span>'s expenses. Leave blank for no limit.</p>
+          <table id="budgets-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Budget</th>
+                <th class="amount-col">Spent</th>
+                <th>Progress</th>
+              </tr>
+            </thead>
+            <tbody id="budgets-body"></tbody>
+          </table>
+        </section>
+      </section>
+
+      <!-- ================= INVESTMENTS ================= -->
+      <section class="page" id="page-investments">
+        <h1 class="page-title">Investments</h1>
+        <section class="card">
+          <h2>Log a Balance Snapshot</h2>
+          <p class="hint">
+            Log periodic balance snapshots for your investment accounts (e.g. IBKR, 401k) by hand
+            to track them alongside your cash balance. No account connection required.
+          </p>
+
+          <form id="investment-form">
+            <div class="form-row">
+              <label>
+                Date
+                <input type="date" id="investment-date" required />
+              </label>
+              <label>
+                Account
+                <input type="text" id="investment-account" placeholder="e.g. IBKR" required />
+              </label>
+              <label>
+                Balance
+                <input type="number" id="investment-balance" step="0.01" min="0" placeholder="0.00" required />
+              </label>
+            </div>
+            <button type="submit">Add Snapshot</button>
+          </form>
+        </section>
+
+        <section class="summary-grid">
+          <div class="card">
+            <h2>Cash Balance</h2>
+            <p class="amount" id="networth-cash">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Investments</h2>
+            <p class="amount" id="networth-investments">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Net Worth</h2>
+            <p class="amount" id="networth-total">$0.00</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Investment Value Over Time</h2>
+          <canvas id="investment-chart"></canvas>
+        </section>
+
+        <section class="card">
+          <h2>Snapshots</h2>
+          <table id="investments-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Account</th>
+                <th class="amount-col">Balance</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="investments-body"></tbody>
+          </table>
+          <p id="investments-empty" class="hint">No snapshots yet — log your first balance above.</p>
+        </section>
+      </section>
+
+      <!-- ================= BILLS ================= -->
+      <section class="page" id="page-bills">
+        <h1 class="page-title">Bills &amp; Subscriptions</h1>
+
+        <section class="card">
+          <h2>Add a Recurring Bill</h2>
+          <p class="hint">Logged bills repeat monthly on the same day.</p>
+          <form id="bill-form">
+            <div class="form-row">
+              <label>
+                Name
+                <input type="text" id="bill-name" placeholder="e.g. Netflix" required />
+              </label>
+              <label>
+                Category
+                <select id="bill-category"></select>
+              </label>
+            </div>
+            <div class="form-row">
+              <label>
+                Amount
+                <input type="number" id="bill-amount" step="0.01" min="0.01" placeholder="0.00" required />
+              </label>
+              <label>
+                Due day of month
+                <input type="number" id="bill-day" min="1" max="31" placeholder="1-31" required />
+              </label>
+            </div>
+            <button type="submit">Add Bill</button>
+          </form>
+        </section>
+
+        <section class="summary-grid">
+          <div class="card">
+            <h2>Monthly Total</h2>
+            <p class="amount" id="bills-monthly-total">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Yearly Total</h2>
+            <p class="amount" id="bills-yearly-total">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Upcoming (30 days)</h2>
+            <p class="amount" id="bills-upcoming-total">$0.00</p>
+          </div>
+        </section>
+
+        <section class="charts-grid">
+          <div class="card">
+            <div class="list-header">
+              <h2 id="bills-calendar-label">Calendar</h2>
+              <div class="calendar-nav">
+                <button type="button" class="secondary" id="bills-cal-prev">‹</button>
+                <button type="button" class="secondary" id="bills-cal-next">›</button>
+              </div>
+            </div>
+            <div class="calendar-grid" id="bills-calendar"></div>
+          </div>
+          <div class="card">
+            <h2>Upcoming</h2>
+            <ul class="mini-list" id="bills-upcoming-list"></ul>
+            <p class="hint hidden" id="bills-upcoming-empty">No bills logged yet.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>All Bills</h2>
+          <table id="bills-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Due Day</th>
+                <th class="amount-col">Amount</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="bills-body"></tbody>
+          </table>
+          <p id="bills-empty" class="hint">No bills yet — add one above.</p>
+        </section>
+      </section>
+
+      <!-- ================= SETTINGS ================= -->
+      <section class="page" id="page-settings">
+        <h1 class="page-title">Settings</h1>
+        <section class="card">
+          <h2>Appearance</h2>
+          <p class="hint">Everything lives in this browser's local storage — nothing is ever sent anywhere.</p>
+
+          <div class="settings-row">
+            <span>Theme</span>
+            <button id="theme-toggle" title="Toggle light/dark mode">🌙 Toggle</button>
+          </div>
+
+          <div class="settings-row">
+            <span>Accent color</span>
+            <div class="accent-picker" id="accent-picker">
+              <button class="accent-swatch" data-color="#5b8def" style="background:#5b8def" title="Blue"></button>
+              <button class="accent-swatch" data-color="#a78bfa" style="background:#a78bfa" title="Purple"></button>
+              <button class="accent-swatch" data-color="#3ecf8e" style="background:#3ecf8e" title="Green"></button>
+              <button class="accent-swatch" data-color="#fb923c" style="background:#fb923c" title="Orange"></button>
+              <button class="accent-swatch" data-color="#e879f9" style="background:#e879f9" title="Pink"></button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+    </main>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>

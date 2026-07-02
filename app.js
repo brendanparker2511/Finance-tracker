@@ -8,6 +8,7 @@
 const STORAGE_KEY = "finance-tracker-transactions";
 const BUDGET_KEY = "finance-tracker-budgets";
 const INVESTMENTS_KEY = "finance-tracker-investments";
+const BILLS_KEY = "finance-tracker-bills";
 
 const CATEGORIES = [
   "Income", "Housing", "Groceries", "Transport", "Utilities",
@@ -64,9 +65,19 @@ function saveInvestments(investments) {
   localStorage.setItem(INVESTMENTS_KEY, JSON.stringify(investments));
 }
 
+function loadBills() {
+  const raw = localStorage.getItem(BILLS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveBills(bills) {
+  localStorage.setItem(BILLS_KEY, JSON.stringify(bills));
+}
+
 let transactions = loadTransactions();
 let budgets = loadBudgets(); // { categoryName: monthlyLimit }
 let investments = loadInvestments(); // [{ id, date, accountName, balance }]
+let bills = loadBills(); // [{ id, name, category, amount, dueDay }]
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -94,8 +105,46 @@ const networthCashEl = document.getElementById("networth-cash");
 const networthInvestmentsEl = document.getElementById("networth-investments");
 const networthTotalEl = document.getElementById("networth-total");
 
+const billForm = document.getElementById("bill-form");
+const billNameInput = document.getElementById("bill-name");
+const billCategorySelect = document.getElementById("bill-category");
+const billAmountInput = document.getElementById("bill-amount");
+const billDayInput = document.getElementById("bill-day");
+const billsBody = document.getElementById("bills-body");
+const billsEmpty = document.getElementById("bills-empty");
+const billsMonthlyTotalEl = document.getElementById("bills-monthly-total");
+const billsYearlyTotalEl = document.getElementById("bills-yearly-total");
+const billsUpcomingTotalEl = document.getElementById("bills-upcoming-total");
+const billsUpcomingListEl = document.getElementById("bills-upcoming-list");
+const billsUpcomingEmptyEl = document.getElementById("bills-upcoming-empty");
+const billsCalendarEl = document.getElementById("bills-calendar");
+const billsCalendarLabelEl = document.getElementById("bills-calendar-label");
+const billsCalPrevBtn = document.getElementById("bills-cal-prev");
+const billsCalNextBtn = document.getElementById("bills-cal-next");
+
+const dashboardNetworthEl = document.getElementById("dashboard-networth");
+const dashboardUpcomingBillsEl = document.getElementById("dashboard-upcoming-bills");
+const dashboardBillsEmptyEl = document.getElementById("dashboard-bills-empty");
+const dashboardRecentTransactionsEl = document.getElementById("dashboard-recent-transactions");
+const dashboardTransactionsEmptyEl = document.getElementById("dashboard-transactions-empty");
+
 const themeToggleBtn = document.getElementById("theme-toggle");
 const accentPicker = document.getElementById("accent-picker");
+
+// ---------------------------------------------------------------------------
+// Sidebar page navigation
+// ---------------------------------------------------------------------------
+
+document.getElementById("sidebar-nav").addEventListener("click", (e) => {
+  const btn = e.target.closest(".nav-item");
+  if (!btn) return;
+  showPage(btn.dataset.page);
+});
+
+function showPage(pageName) {
+  document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${pageName}`));
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.page === pageName));
+}
 
 const csvInput = document.getElementById("csv-input");
 const csvMapping = document.getElementById("csv-mapping");
@@ -359,6 +408,184 @@ function renderInvestments() {
 }
 
 // ---------------------------------------------------------------------------
+// Rendering: bills & subscriptions
+// ---------------------------------------------------------------------------
+
+function populateBillCategoryDropdown() {
+  billCategorySelect.innerHTML = CATEGORIES.filter(c => c !== "Income").map(c => `<option value="${c}">${c}</option>`).join("");
+}
+
+function daysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+// Finds the next date (on or after `from`) that a bill with this due-day recurs on,
+// clamping to the last day of shorter months (e.g. a "31st" bill lands on Feb 28/29).
+function nextBillDueDate(dueDay, from = new Date()) {
+  const year = from.getFullYear();
+  const month = from.getMonth();
+  if (dueDay >= from.getDate()) {
+    return new Date(year, month, Math.min(dueDay, daysInMonth(year, month)));
+  }
+  return new Date(year, month + 1, Math.min(dueDay, daysInMonth(year, month + 1)));
+}
+
+function billsMonthlyTotal() {
+  return bills.reduce((sum, b) => sum + b.amount, 0);
+}
+
+function renderBillsSummary() {
+  const monthly = billsMonthlyTotal();
+  billsMonthlyTotalEl.textContent = money(monthly);
+  billsYearlyTotalEl.textContent = money(monthly * 12);
+
+  const now = new Date();
+  const in30Days = new Date(now);
+  in30Days.setDate(in30Days.getDate() + 30);
+
+  const upcomingTotal = bills
+    .filter(b => nextBillDueDate(b.dueDay, now) <= in30Days)
+    .reduce((sum, b) => sum + b.amount, 0);
+  billsUpcomingTotalEl.textContent = money(upcomingTotal);
+}
+
+function renderBillsTable() {
+  billsEmpty.classList.toggle("hidden", bills.length > 0);
+  const rows = bills.slice().sort((a, b) => a.dueDay - b.dueDay);
+
+  billsBody.innerHTML = rows.map(b => `
+    <tr>
+      <td>${escapeHtml(b.name)}</td>
+      <td>${b.category}</td>
+      <td>${b.dueDay}</td>
+      <td class="amount-col">${money(b.amount)}</td>
+      <td class="row-actions"><button class="delete-bill-btn" data-id="${b.id}" title="Delete">✕</button></td>
+    </tr>
+  `).join("");
+}
+
+billsBody.addEventListener("click", (e) => {
+  const btn = e.target.closest(".delete-bill-btn");
+  if (!btn) return;
+  bills = bills.filter(b => b.id !== btn.dataset.id);
+  saveBills(bills);
+  renderBills();
+});
+
+billForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const name = billNameInput.value.trim();
+  const category = billCategorySelect.value;
+  const amount = parseFloat(billAmountInput.value);
+  const dueDay = parseInt(billDayInput.value, 10);
+
+  if (!name || !amount || !dueDay || dueDay < 1 || dueDay > 31) return;
+
+  bills.push({ id: crypto.randomUUID(), name, category, amount, dueDay });
+  saveBills(bills);
+  renderBills();
+  billForm.reset();
+});
+
+// Shared by the Bills page and the Dashboard widget, just with different list sizes.
+function renderUpcomingBillsList(targetEl, emptyEl, limit) {
+  const now = new Date();
+  const upcoming = bills
+    .map(b => ({ ...b, next: nextBillDueDate(b.dueDay, now) }))
+    .sort((a, b) => a.next - b.next)
+    .slice(0, limit);
+
+  emptyEl.classList.toggle("hidden", bills.length > 0);
+  targetEl.innerHTML = upcoming.map(b => `
+    <li>
+      <div>
+        <div>${escapeHtml(b.name)}</div>
+        <div class="mini-sub">${b.next.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
+      </div>
+      <span>${money(b.amount)}</span>
+    </li>
+  `).join("");
+}
+
+let billsCalendarDate = new Date(); // which month the calendar is currently showing
+
+function renderBillsCalendar() {
+  const year = billsCalendarDate.getFullYear();
+  const month = billsCalendarDate.getMonth();
+  const totalDays = daysInMonth(year, month);
+  const firstWeekday = new Date(year, month, 1).getDay();
+
+  billsCalendarLabelEl.textContent = billsCalendarDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const billsByDay = {};
+  bills.forEach(b => {
+    const day = Math.min(b.dueDay, totalDays);
+    if (!billsByDay[day]) billsByDay[day] = [];
+    billsByDay[day].push(b);
+  });
+
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    .map(d => `<div class="calendar-day-label">${d}</div>`).join("");
+
+  let cells = "";
+  for (let i = 0; i < firstWeekday; i++) cells += `<div class="calendar-cell empty"></div>`;
+  for (let day = 1; day <= totalDays; day++) {
+    const dayBills = billsByDay[day] || [];
+    cells += `
+      <div class="calendar-cell">
+        <div class="day-num">${day}</div>
+        ${dayBills.map(b => `<div class="bill-chip" title="${escapeHtml(b.name)} – ${money(b.amount)}">${escapeHtml(b.name)}</div>`).join("")}
+      </div>
+    `;
+  }
+
+  billsCalendarEl.innerHTML = dayLabels + cells;
+}
+
+billsCalPrevBtn.addEventListener("click", () => {
+  billsCalendarDate = new Date(billsCalendarDate.getFullYear(), billsCalendarDate.getMonth() - 1, 1);
+  renderBillsCalendar();
+});
+
+billsCalNextBtn.addEventListener("click", () => {
+  billsCalendarDate = new Date(billsCalendarDate.getFullYear(), billsCalendarDate.getMonth() + 1, 1);
+  renderBillsCalendar();
+});
+
+function renderBills() {
+  renderBillsSummary();
+  renderBillsTable();
+  renderUpcomingBillsList(billsUpcomingListEl, billsUpcomingEmptyEl, 8);
+  renderBillsCalendar();
+}
+
+// ---------------------------------------------------------------------------
+// Rendering: dashboard
+// ---------------------------------------------------------------------------
+
+function renderDashboard() {
+  dashboardNetworthEl.textContent = money(cashBalance() + totalInvestments());
+  renderUpcomingBillsList(dashboardUpcomingBillsEl, dashboardBillsEmptyEl, 5);
+  renderDashboardRecentTransactions();
+}
+
+function renderDashboardRecentTransactions() {
+  const recent = transactions.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  dashboardTransactionsEmptyEl.classList.toggle("hidden", transactions.length > 0);
+
+  dashboardRecentTransactionsEl.innerHTML = recent.map(t => `
+    <li>
+      <div>
+        <div>${escapeHtml(t.description)}</div>
+        <div class="mini-sub">${t.date} · ${t.category}</div>
+      </div>
+      <span class="${t.type === "income" ? "row-income" : "row-expense"}">${t.type === "income" ? "+" : "-"}${money(t.amount)}</span>
+    </li>
+  `).join("");
+}
+
+// ---------------------------------------------------------------------------
 // Rendering: transactions table
 // ---------------------------------------------------------------------------
 
@@ -567,6 +794,8 @@ function renderAll() {
   renderCharts();
   renderBudgets();
   renderInvestments();
+  renderBills();
+  renderDashboard();
 }
 
 // ---------------------------------------------------------------------------
@@ -733,6 +962,7 @@ function normalizeDate(value) {
 applyTheme(localStorage.getItem(THEME_KEY) || "dark");
 applyAccent(localStorage.getItem(ACCENT_KEY) || "#5b8def");
 populateCategoryDropdowns();
+populateBillCategoryDropdown();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
 investmentDateInput.value = new Date().toISOString().slice(0, 10);
 renderAll();
