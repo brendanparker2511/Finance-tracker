@@ -164,6 +164,9 @@ const pdfStatus = document.getElementById("pdf-status");
 const pdfPreview = document.getElementById("pdf-preview");
 const pdfPreviewBody = document.getElementById("pdf-preview-body");
 const pdfConfirmBtn = document.getElementById("pdf-confirm-btn");
+const pdfPasswordPrompt = document.getElementById("pdf-password-prompt");
+const pdfPasswordInput = document.getElementById("pdf-password-input");
+const pdfPasswordSubmit = document.getElementById("pdf-password-submit");
 
 // ---------------------------------------------------------------------------
 // Theme + accent color
@@ -1058,9 +1061,7 @@ function parsePdfDate(text) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function extractPdfLines(file) {
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+async function extractPdfLines(pdf) {
   const lines = [];
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -1159,17 +1160,30 @@ function renderPdfPreview(candidates) {
   `).join("");
 }
 
-pdfInput.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+let pendingPasswordCallback = null; // PDF.js's updatePassword(), stashed while we wait on the user
 
+let pendingPdfFile = null; // held onto so a password retry doesn't need the file re-picked
+
+async function runPdfExtraction(file, password) {
   pdfStatus.textContent = "Reading PDF…";
   pdfPreview.classList.add("hidden");
 
   try {
-    const lines = await extractPdfLines(file);
-    const candidates = extractTransactionCandidates(lines);
+    // Read a fresh ArrayBuffer for every attempt, and issue a brand new
+    // getDocument() call rather than retrying via PDF.js's built-in
+    // onPassword/updatePassword mechanism — that path reuses its original
+    // (by-then-transferred, now-detached) buffer internally and reliably
+    // fails with "Cannot perform Construct on a detached ArrayBuffer".
+    const bytes = await file.arrayBuffer();
+    const options = { data: bytes };
+    if (password) options.password = password;
+    const pdf = await pdfjsLib.getDocument(options).promise;
 
+    pendingPdfFile = null;
+    pdfPasswordPrompt.classList.add("hidden");
+
+    const lines = await extractPdfLines(pdf);
+    const candidates = extractTransactionCandidates(lines);
     if (candidates.length === 0) {
       pdfStatus.textContent = "Couldn't find any transaction-looking rows in that PDF. It may be a scanned image rather than text, which this can't read.";
       return;
@@ -1178,8 +1192,29 @@ pdfInput.addEventListener("change", async (e) => {
     renderPdfPreview(candidates);
     pdfStatus.textContent = `Found ${candidates.length} possible transaction${candidates.length === 1 ? "" : "s"}. Double-check dates especially — review every row below, then import.`;
   } catch (err) {
+    if (err.name === "PasswordException") {
+      pendingPdfFile = file;
+      pdfPasswordPrompt.classList.remove("hidden");
+      pdfStatus.textContent = err.code === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD
+        ? "That password didn't work — try again."
+        : "This PDF is password-protected. Enter the password your bank gave you for statements.";
+      return;
+    }
     pdfStatus.textContent = `Couldn't read that PDF: ${err.message}`;
   }
+}
+
+pdfInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  pdfPasswordPrompt.classList.add("hidden");
+  pdfPasswordInput.value = "";
+  runPdfExtraction(file);
+});
+
+pdfPasswordSubmit.addEventListener("click", () => {
+  if (!pendingPdfFile) return;
+  runPdfExtraction(pendingPdfFile, pdfPasswordInput.value);
 });
 
 pdfConfirmBtn.addEventListener("click", () => {

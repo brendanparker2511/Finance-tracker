@@ -168,6 +168,13 @@
           </p>
           <input type="file" id="pdf-input" accept="application/pdf" />
           <p id="pdf-status" class="hint"></p>
+          <div id="pdf-password-prompt" class="form-row hidden">
+            <label>
+              PDF Password
+              <input type="password" id="pdf-password-input" placeholder="Password from your bank" />
+            </label>
+            <button type="button" id="pdf-password-submit">Unlock &amp; Read</button>
+          </div>
           <div id="pdf-preview" class="hidden">
             <table id="pdf-preview-table">
               <thead>
