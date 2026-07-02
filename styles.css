@@ -52,13 +52,6 @@ body {
   background-size: 8px 8px, 8px 8px, 16px 16px;
 }
 
-[data-theme="carbon"] .card,
-[data-theme="carbon"] .sidebar {
-  background-image:
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0px, rgba(255, 255, 255, 0.025) 2px, transparent 2px, transparent 8px),
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 2px, transparent 2px, transparent 8px);
-  background-color: var(--card-bg);
-}
 
 .tagline { color: var(--muted); margin: 0; font-size: 0.8rem; }
 

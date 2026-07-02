@@ -262,7 +262,7 @@ function populateCategoryDropdowns() {
 // ---------------------------------------------------------------------------
 
 function money(n) {
-  return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+  return n.toLocaleString(undefined, { style: "currency", currency: "AED" });
 }
 
 // ---------------------------------------------------------------------------
