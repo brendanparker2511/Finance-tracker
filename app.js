@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = "finance-tracker-transactions";
+const BUDGET_KEY = "finance-tracker-budgets";
 
 const CATEGORIES = [
   "Income", "Housing", "Groceries", "Transport", "Utilities",
@@ -44,7 +45,17 @@ function saveTransactions(transactions) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
 }
 
+function loadBudgets() {
+  const raw = localStorage.getItem(BUDGET_KEY);
+  return raw ? JSON.parse(raw) : {};
+}
+
+function saveBudgets(budgets) {
+  localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets));
+}
+
 let transactions = loadTransactions();
+let budgets = loadBudgets(); // { categoryName: monthlyLimit }
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -58,6 +69,8 @@ const categorySelect = document.getElementById("input-category");
 const filterCategorySelect = document.getElementById("filter-category");
 const tableBody = document.getElementById("transactions-body");
 const emptyState = document.getElementById("empty-state");
+const budgetsBody = document.getElementById("budgets-body");
+const budgetMonthLabel = document.getElementById("budget-month-label");
 
 const csvInput = document.getElementById("csv-input");
 const csvMapping = document.getElementById("csv-mapping");
@@ -99,6 +112,66 @@ function renderSummary() {
   incomeEl.textContent = money(income);
   expenseEl.textContent = money(expense);
 }
+
+// ---------------------------------------------------------------------------
+// Rendering: monthly budgets
+// ---------------------------------------------------------------------------
+
+function currentMonthSpending() {
+  const month = new Date().toISOString().slice(0, 7);
+  const totals = {};
+  transactions
+    .filter(t => t.type === "expense" && t.date.slice(0, 7) === month)
+    .forEach(t => { totals[t.category] = (totals[t.category] || 0) + t.amount; });
+  return totals;
+}
+
+function renderBudgets() {
+  budgetMonthLabel.textContent = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const spending = currentMonthSpending();
+  const budgetCategories = CATEGORIES.filter(c => c !== "Income");
+
+  budgetsBody.innerHTML = budgetCategories.map(category => {
+    const budget = budgets[category] || 0;
+    const spent = spending[category] || 0;
+    const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
+    const over = budget > 0 && spent > budget;
+
+    return `
+      <tr>
+        <td>${category}</td>
+        <td>
+          <input type="number" class="budget-input" data-category="${category}"
+                 min="0" step="1" placeholder="No limit" value="${budget || ""}" />
+        </td>
+        <td class="amount-col">${money(spent)}</td>
+        <td>
+          <div class="budget-bar" title="${budget > 0 ? `${money(spent)} of ${money(budget)}` : "No budget set"}">
+            <div class="budget-bar-fill ${over ? "over" : ""}" style="width: ${pct}%"></div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+budgetsBody.addEventListener("change", (e) => {
+  const input = e.target.closest(".budget-input");
+  if (!input) return;
+
+  const category = input.dataset.category;
+  const value = parseFloat(input.value);
+
+  if (!value || value <= 0) {
+    delete budgets[category];
+  } else {
+    budgets[category] = value;
+  }
+
+  saveBudgets(budgets);
+  renderBudgets();
+});
 
 // ---------------------------------------------------------------------------
 // Rendering: transactions table
@@ -230,6 +303,7 @@ function renderAll() {
   renderSummary();
   renderTable();
   renderCharts();
+  renderBudgets();
 }
 
 // ---------------------------------------------------------------------------
