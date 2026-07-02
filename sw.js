@@ -1,4 +1,4 @@
-const CACHE_NAME = "finance-tracker-v2";
+const CACHE_NAME = "finance-tracker-v3";
 
 const ASSETS = [
   "./",
@@ -10,6 +10,8 @@ const ASSETS = [
   "./icons/icon-512.png",
   "https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js",
   "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js",
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
 ];
 
 self.addEventListener("install", (event) => {

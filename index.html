@@ -157,6 +157,34 @@
           <p id="csv-status" class="hint"></p>
         </section>
 
+        <!-- Import transactions from a bank statement PDF -->
+        <section class="card">
+          <h2>Import from PDF Statement</h2>
+          <p class="hint">
+            Upload a bank statement PDF and we'll try to pull out transaction rows automatically.
+            This is a best-effort parser — bank PDF layouts vary a lot, so
+            <strong>always check the rows below before importing</strong>. Nothing is added until you
+            click "Import Selected."
+          </p>
+          <input type="file" id="pdf-input" accept="application/pdf" />
+          <p id="pdf-status" class="hint"></p>
+          <div id="pdf-preview" class="hidden">
+            <table id="pdf-preview-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody id="pdf-preview-body"></tbody>
+            </table>
+            <button type="button" id="pdf-confirm-btn">Import Selected</button>
+          </div>
+        </section>
+
         <!-- Transaction list -->
         <section class="card">
           <div class="list-header">
@@ -412,6 +440,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -159,6 +159,12 @@ const csvConfirmBtn = document.getElementById("csv-confirm");
 
 let parsedCsvRows = null; // rows waiting on column mapping before import
 
+const pdfInput = document.getElementById("pdf-input");
+const pdfStatus = document.getElementById("pdf-status");
+const pdfPreview = document.getElementById("pdf-preview");
+const pdfPreviewBody = document.getElementById("pdf-preview-body");
+const pdfConfirmBtn = document.getElementById("pdf-confirm-btn");
+
 // ---------------------------------------------------------------------------
 // Theme + accent color
 // ---------------------------------------------------------------------------
@@ -1004,8 +1010,211 @@ function normalizeDate(value) {
   if (!value) return null;
   const d = new Date(value);
   if (isNaN(d.getTime())) return null;
-  return d.toISOString().slice(0, 10);
+  // Build the date string from local components, not .toISOString() (which
+  // converts to UTC and can silently shift the date by a day depending on
+  // the browser's timezone).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
+
+// ---------------------------------------------------------------------------
+// PDF statement import
+//
+// Bank statement PDFs don't have a standard layout, so this is a best-effort
+// text extraction: pull lines of text out of the PDF, then look for lines
+// that contain both a date and a dollar-style amount. Everything lands in an
+// editable preview table — nothing is imported until the user confirms.
+// ---------------------------------------------------------------------------
+
+const PDF_DATE_PATTERNS = [
+  /\b(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})\b/,
+  /\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i,
+  /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4})\b/i,
+];
+
+const PDF_AMOUNT_PATTERN = /\(?-?\d{1,3}(?:,\d{3})*\.\d{2}\)?\s*(CR|DR|Cr|Dr)?/g;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+
+// JS's Date parser assumes MM/DD/YYYY for slash-separated dates, but most
+// non-US bank statements use DD/MM/YYYY. When a number is unambiguous
+// (greater than 12), trust it; otherwise assume day-first.
+function parsePdfDate(text) {
+  const slashMatch = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (!slashMatch) return normalizeDate(text);
+
+  let [, first, second, yearStr] = slashMatch;
+  first = parseInt(first, 10);
+  second = parseInt(second, 10);
+  const year = yearStr.length === 2 ? 2000 + parseInt(yearStr, 10) : parseInt(yearStr, 10);
+
+  let day = first, month = second;
+  if (first <= 12 && second > 12) { day = second; month = first; } // only fits as MM/DD
+
+  const d = new Date(year, month - 1, day);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+async function extractPdfLines(file) {
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const lines = [];
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+
+    // Text items come with x/y positions, not clean lines — group items
+    // that share a y-coordinate (rounded, since it's rarely pixel-exact).
+    const rows = {};
+    content.items.forEach(item => {
+      const y = Math.round(item.transform[5]);
+      const x = item.transform[4];
+      if (!rows[y]) rows[y] = [];
+      rows[y].push({ x, str: item.str });
+    });
+
+    Object.keys(rows)
+      .map(Number)
+      .sort((a, b) => b - a) // top of page first
+      .forEach(y => {
+        const line = rows[y]
+          .sort((a, b) => a.x - b.x)
+          .map(i => i.str)
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (line) lines.push(line);
+      });
+  }
+
+  return lines;
+}
+
+function extractTransactionCandidates(lines) {
+  const candidates = [];
+
+  lines.forEach(line => {
+    let dateMatch = null;
+    for (const pattern of PDF_DATE_PATTERNS) {
+      dateMatch = line.match(pattern);
+      if (dateMatch) break;
+    }
+    if (!dateMatch) return;
+
+    const amounts = [...line.matchAll(PDF_AMOUNT_PATTERN)];
+    if (amounts.length === 0) return;
+
+    // If a line has a transaction amount *and* a running balance, the
+    // balance is usually the last number and the amount the one before it.
+    const chosen = amounts.length > 1 ? amounts[amounts.length - 2] : amounts[0];
+    const raw = chosen[0];
+    const numeric = parseFloat(raw.replace(/[^\d.]/g, ""));
+    if (!numeric) return;
+
+    const date = parsePdfDate(dateMatch[1]);
+    if (!date) return;
+
+    let description = line.replace(dateMatch[1], "");
+    amounts.forEach(a => { description = description.replace(a[0], ""); });
+    description = description.replace(/\s+/g, " ").trim() || "(no description)";
+
+    const isExplicitCredit = /CR/i.test(raw);
+    const isExplicitDebit = /DR/i.test(raw) || /^\(|^-/.test(raw.trim());
+
+    candidates.push({
+      date,
+      description,
+      amount: numeric,
+      type: isExplicitCredit && !isExplicitDebit ? "income" : "expense",
+    });
+  });
+
+  return candidates;
+}
+
+function renderPdfPreview(candidates) {
+  if (candidates.length === 0) {
+    pdfPreview.classList.add("hidden");
+    return;
+  }
+
+  pdfPreview.classList.remove("hidden");
+  pdfPreviewBody.innerHTML = candidates.map(c => `
+    <tr>
+      <td><input type="checkbox" class="pdf-row-include" checked /></td>
+      <td><input type="date" class="pdf-row-date" value="${c.date}" /></td>
+      <td><input type="text" class="pdf-row-description" value="${escapeHtml(c.description)}" /></td>
+      <td><input type="number" step="0.01" class="pdf-row-amount" value="${c.amount}" /></td>
+      <td>
+        <select class="pdf-row-type">
+          <option value="expense" ${c.type === "expense" ? "selected" : ""}>Expense</option>
+          <option value="income" ${c.type === "income" ? "selected" : ""}>Income</option>
+        </select>
+      </td>
+    </tr>
+  `).join("");
+}
+
+pdfInput.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  pdfStatus.textContent = "Reading PDF…";
+  pdfPreview.classList.add("hidden");
+
+  try {
+    const lines = await extractPdfLines(file);
+    const candidates = extractTransactionCandidates(lines);
+
+    if (candidates.length === 0) {
+      pdfStatus.textContent = "Couldn't find any transaction-looking rows in that PDF. It may be a scanned image rather than text, which this can't read.";
+      return;
+    }
+
+    renderPdfPreview(candidates);
+    pdfStatus.textContent = `Found ${candidates.length} possible transaction${candidates.length === 1 ? "" : "s"}. Double-check dates especially — review every row below, then import.`;
+  } catch (err) {
+    pdfStatus.textContent = `Couldn't read that PDF: ${err.message}`;
+  }
+});
+
+pdfConfirmBtn.addEventListener("click", () => {
+  const rows = [...pdfPreviewBody.querySelectorAll("tr")];
+  let imported = 0;
+
+  rows.forEach(row => {
+    if (!row.querySelector(".pdf-row-include").checked) return;
+
+    const date = row.querySelector(".pdf-row-date").value;
+    const description = row.querySelector(".pdf-row-description").value.trim();
+    const amount = parseFloat(row.querySelector(".pdf-row-amount").value);
+    const type = row.querySelector(".pdf-row-type").value;
+
+    if (!date || !description || isNaN(amount) || amount <= 0) return;
+
+    transactions.push({
+      id: crypto.randomUUID(),
+      date,
+      description,
+      category: guessCategory(description),
+      type,
+      amount,
+    });
+    imported++;
+  });
+
+  saveTransactions(transactions);
+  renderAll();
+
+  pdfStatus.textContent = `Imported ${imported} transaction${imported === 1 ? "" : "s"}.`;
+  pdfPreview.classList.add("hidden");
+  pdfPreviewBody.innerHTML = "";
+  pdfInput.value = "";
+});
 
 // ---------------------------------------------------------------------------
 // Startup
