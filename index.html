@@ -2,9 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>My Finance Tracker</title>
 <link rel="stylesheet" href="styles.css" />
+
+<!-- PWA: lets this be installed to a phone home screen as a standalone app -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0f1115" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Finance Tracker" />
 </head>
 <body>
 
@@ -350,7 +359,11 @@
 
           <div class="settings-row">
             <span>Theme</span>
-            <button id="theme-toggle" title="Toggle light/dark mode">🌙 Toggle</button>
+            <div class="theme-picker" id="theme-picker">
+              <button class="theme-option" data-theme="dark">🌙 Dark</button>
+              <button class="theme-option" data-theme="light">☀️ Light</button>
+              <button class="theme-option" data-theme="carbon">🖤 Carbon Fiber</button>
+            </div>
           </div>
 
           <div class="settings-row">
@@ -363,6 +376,34 @@
               <button class="accent-swatch" data-color="#e879f9" style="background:#e879f9" title="Pink"></button>
             </div>
           </div>
+        </section>
+
+        <section class="card">
+          <h2>Backup &amp; Restore</h2>
+          <p class="hint">
+            Your data lives only in this browser's local storage — it isn't synced anywhere.
+            Download a backup occasionally, especially before switching browsers, clearing site data,
+            or moving to a new device.
+          </p>
+          <div class="form-row">
+            <button type="button" id="export-data-btn">⬇ Export Backup</button>
+            <label>
+              Import Backup
+              <input type="file" id="import-data-input" accept="application/json" />
+            </label>
+          </div>
+          <p id="import-status" class="hint"></p>
+        </section>
+
+        <section class="card">
+          <h2>Install on Your Phone</h2>
+          <p class="hint">
+            This app can be installed like a native app, with no app store required.
+          </p>
+          <p class="hint">
+            <strong>iPhone (Safari):</strong> tap the Share icon, then "Add to Home Screen".<br />
+            <strong>Android (Chrome):</strong> tap the ⋮ menu, then "Add to Home screen" / "Install app".
+          </p>
         </section>
       </section>
 

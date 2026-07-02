@@ -128,8 +128,11 @@ const dashboardBillsEmptyEl = document.getElementById("dashboard-bills-empty");
 const dashboardRecentTransactionsEl = document.getElementById("dashboard-recent-transactions");
 const dashboardTransactionsEmptyEl = document.getElementById("dashboard-transactions-empty");
 
-const themeToggleBtn = document.getElementById("theme-toggle");
+const themePicker = document.getElementById("theme-picker");
 const accentPicker = document.getElementById("accent-picker");
+const exportDataBtn = document.getElementById("export-data-btn");
+const importDataInput = document.getElementById("import-data-input");
+const importStatus = document.getElementById("import-status");
 
 // ---------------------------------------------------------------------------
 // Sidebar page navigation
@@ -169,8 +172,10 @@ function cssVar(name) {
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  themeToggleBtn.textContent = theme === "light" ? "☀️" : "🌙";
   localStorage.setItem(THEME_KEY, theme);
+  document.querySelectorAll(".theme-option").forEach(el => {
+    el.classList.toggle("active", el.dataset.theme === theme);
+  });
 }
 
 function applyAccent(color) {
@@ -181,9 +186,10 @@ function applyAccent(color) {
   });
 }
 
-themeToggleBtn.addEventListener("click", () => {
-  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-  applyTheme(next);
+themePicker.addEventListener("click", (e) => {
+  const btn = e.target.closest(".theme-option");
+  if (!btn) return;
+  applyTheme(btn.dataset.theme);
   renderAll(); // charts read colors from CSS variables, so they need a fresh render
 });
 
@@ -192,6 +198,52 @@ accentPicker.addEventListener("click", (e) => {
   if (!btn) return;
   applyAccent(btn.dataset.color);
   renderAll();
+});
+
+// ---------------------------------------------------------------------------
+// Backup & restore (export/import all data as a JSON file)
+// ---------------------------------------------------------------------------
+
+const DATA_KEYS = [STORAGE_KEY, BUDGET_KEY, INVESTMENTS_KEY, BILLS_KEY];
+
+exportDataBtn.addEventListener("click", () => {
+  const backup = { exportedAt: new Date().toISOString() };
+  DATA_KEYS.forEach(key => { backup[key] = localStorage.getItem(key); });
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `finance-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+});
+
+importDataInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const backup = JSON.parse(reader.result);
+      DATA_KEYS.forEach(key => {
+        if (backup[key] != null) localStorage.setItem(key, backup[key]);
+      });
+
+      transactions = loadTransactions();
+      budgets = loadBudgets();
+      investments = loadInvestments();
+      bills = loadBills();
+      renderAll();
+
+      importStatus.textContent = `Backup restored (exported ${backup.exportedAt ? new Date(backup.exportedAt).toLocaleString() : "unknown date"}).`;
+    } catch (err) {
+      importStatus.textContent = "Couldn't read that file — make sure it's a backup exported from this app.";
+    }
+  };
+  reader.readAsText(file);
+  importDataInput.value = "";
 });
 
 // ---------------------------------------------------------------------------
@@ -966,3 +1018,9 @@ populateBillCategoryDropdown();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
 investmentDateInput.value = new Date().toISOString().slice(0, 10);
 renderAll();
+
+// Registering a service worker lets the app be installed on a phone home
+// screen and keep working without a network connection.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
