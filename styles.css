@@ -11,7 +11,11 @@
   --radius: 10px;
 }
 
-[data-theme="light"] {
+/* Scoped to :root specifically — a bare [data-theme="..."] attribute
+   selector would also match the theme-picker buttons themselves (they
+   carry the same attribute for JS's benefit), overriding their own colors
+   regardless of which theme is actually active. */
+:root[data-theme="light"] {
   --bg: #f4f5f7;
   --card-bg: #ffffff;
   --input-bg: #f7f8fa;
@@ -22,7 +26,7 @@
   --expense: #d33f49;
 }
 
-[data-theme="carbon"] {
+:root[data-theme="carbon"] {
   --bg: #0a0a0a;
   --card-bg: #141414;
   --input-bg: #0c0c0c;
@@ -68,6 +72,9 @@ body {
 }
 
 .theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--input-bg);
   color: var(--muted);
   border: 1px solid var(--border);
@@ -75,6 +82,8 @@ body {
   font-size: 0.85rem;
   line-height: 1;
 }
+
+.theme-option svg { width: 15px; height: 15px; flex-shrink: 0; }
 
 .theme-option.active {
   background: var(--accent);
@@ -131,7 +140,18 @@ body {
   gap: 10px;
 }
 
-.sidebar-logo { font-size: 1.6rem; line-height: 1; }
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-mark svg { width: 18px; height: 18px; }
 
 .sidebar-brand h1 { font-size: 1.05rem; margin: 0 0 2px; line-height: 1.2; }
 
@@ -153,11 +173,15 @@ body {
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
 }
 
-.nav-item:hover { background: var(--input-bg); color: var(--text); }
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+.nav-item:hover { background: var(--input-bg); color: var(--text); transform: translateX(2px); }
 
 .nav-item.active { background: var(--accent); color: white; }
+.nav-item.active:hover { transform: none; }
 
 .page-content {
   flex: 1;
@@ -322,14 +346,22 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
 
 .row-actions { white-space: nowrap; text-align: right; }
 
-.edit-btn, .delete-btn, .delete-bill-btn, .delete-investment-btn {
+.icon-btn {
   background: none;
   border: none;
   color: var(--muted);
   cursor: pointer;
-  padding: 2px 6px;
-  font-size: 0.9rem;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
+
+.icon-btn svg { width: 15px; height: 15px; }
+
+.icon-btn:hover { transform: scale(1.1); }
+
 .edit-btn:hover { color: var(--accent); }
 .delete-btn:hover, .delete-bill-btn:hover, .delete-investment-btn:hover { color: var(--expense); }
 
@@ -356,7 +388,8 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
 .mini-list .mini-sub { color: var(--muted); font-size: 0.8rem; }
 
 .calendar-nav { display: flex; gap: 6px; }
-.calendar-nav button { padding: 4px 12px; }
+.calendar-nav button { padding: 6px 10px; }
+.calendar-nav button svg { width: 15px; height: 15px; }
 
 .calendar-grid {
   display: grid;
@@ -395,6 +428,94 @@ td.amount-col { text-align: right; font-variant-numeric: tabular-nums; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Motion: page-load sequence, page transitions, micro-interactions       */
+/* ---------------------------------------------------------------------- */
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Initial page-load sequence: brand, then nav items staggered, then content */
+.sidebar-brand { animation: slideInLeft 0.5s ease both; }
+
+.nav-item { opacity: 0; animation: fadeInUp 0.4s ease both; }
+.nav-item:nth-child(1) { animation-delay: 0.12s; }
+.nav-item:nth-child(2) { animation-delay: 0.16s; }
+.nav-item:nth-child(3) { animation-delay: 0.2s; }
+.nav-item:nth-child(4) { animation-delay: 0.24s; }
+.nav-item:nth-child(5) { animation-delay: 0.28s; }
+.nav-item:nth-child(6) { animation-delay: 0.32s; }
+
+.page-content { animation: fadeIn 0.5s ease 0.15s both; }
+
+/* Re-plays every time a page becomes active, since display:none -> flex
+   re-triggers the animation. */
+.page.active { animation: fadeInUp 0.35s ease both; }
+
+/* Hover micro-interactions */
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+button {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+button:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+
+.accent-swatch, .icon-btn, .nav-item { box-shadow: none; }
+.accent-swatch:hover { transform: scale(1.12); }
+
+input, select {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Scroll-reveal: cards fade/slide in as they enter the viewport (mainly
+   noticeable on longer pages like Transactions and Bills). */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @media (max-width: 800px) {

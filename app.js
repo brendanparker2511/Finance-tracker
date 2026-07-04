@@ -5,6 +5,13 @@
 // but it only exists on this computer, in this browser.
 // ---------------------------------------------------------------------------
 
+// Small stroke-style SVG icons, used instead of emoji for a consistent,
+// professional look regardless of OS/font emoji rendering.
+const ICONS = {
+  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+};
+
 const STORAGE_KEY = "finance-tracker-transactions";
 const BUDGET_KEY = "finance-tracker-budgets";
 const INVESTMENTS_KEY = "finance-tracker-investments";
@@ -147,6 +154,26 @@ document.getElementById("sidebar-nav").addEventListener("click", (e) => {
 function showPage(pageName) {
   document.querySelectorAll(".page").forEach(el => el.classList.toggle("active", el.id === `page-${pageName}`));
   document.querySelectorAll(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.page === pageName));
+  initScrollReveal();
+}
+
+// Fades/slides cards in as they scroll into view — mainly noticeable on
+// longer pages (Transactions, Bills) where content extends past the fold.
+const scrollRevealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add("visible");
+      scrollRevealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+function initScrollReveal() {
+  document.querySelectorAll(".page.active .card").forEach(card => {
+    if (card.classList.contains("reveal") || card.classList.contains("visible")) return;
+    card.classList.add("reveal");
+    scrollRevealObserver.observe(card);
+  });
 }
 
 const csvInput = document.getElementById("csv-input");
@@ -389,7 +416,7 @@ function renderInvestmentsTable() {
       <td>${escapeHtml(s.accountName)}</td>
       <td class="amount-col">${money(s.balance)}</td>
       <td class="row-actions">
-        <button class="delete-investment-btn" data-id="${s.id}" title="Delete">✕</button>
+        <button class="icon-btn delete-investment-btn" data-id="${s.id}" title="Delete">${ICONS.trash}</button>
       </td>
     </tr>
   `).join("");
@@ -520,7 +547,7 @@ function renderBillsTable() {
       <td>${b.category}</td>
       <td>${b.dueDay}</td>
       <td class="amount-col">${money(b.amount)}</td>
-      <td class="row-actions"><button class="delete-bill-btn" data-id="${b.id}" title="Delete">✕</button></td>
+      <td class="row-actions"><button class="icon-btn delete-bill-btn" data-id="${b.id}" title="Delete">${ICONS.trash}</button></td>
     </tr>
   `).join("");
 }
@@ -668,8 +695,8 @@ function renderTable() {
         ${t.type === "income" ? "+" : "-"}${money(t.amount)}
       </td>
       <td class="row-actions">
-        <button class="edit-btn" data-id="${t.id}" title="Edit">✎</button>
-        <button class="delete-btn" data-id="${t.id}" title="Delete">✕</button>
+        <button class="icon-btn edit-btn" data-id="${t.id}" title="Edit">${ICONS.edit}</button>
+        <button class="icon-btn delete-btn" data-id="${t.id}" title="Delete">${ICONS.trash}</button>
       </td>
     </tr>
   `).join("");
@@ -1003,7 +1030,7 @@ csvConfirmBtn.addEventListener("click", () => {
   saveTransactions(transactions);
   renderAll();
 
-  csvStatus.textContent = `Imported ${imported} transaction${imported === 1 ? "" : "s"}, auto-categorized ${autoCategorized} of them. Click the ✎ on any row to fix a category by hand.`;
+  csvStatus.textContent = `Imported ${imported} transaction${imported === 1 ? "" : "s"}, auto-categorized ${autoCategorized} of them. Click the edit icon on any row to fix a category by hand.`;
   csvMapping.classList.add("hidden");
   parsedCsvRows = null;
   csvInput.value = "";
@@ -1262,6 +1289,7 @@ populateBillCategoryDropdown();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
 investmentDateInput.value = new Date().toISOString().slice(0, 10);
 renderAll();
+initScrollReveal();
 
 // Registering a service worker lets the app be installed on a phone home
 // screen and keep working without a network connection.
