@@ -45,7 +45,7 @@
         </button>
         <button class="nav-item" data-page="investments">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
-          <span>Investments</span>
+          <span>Savings &amp; Investments</span>
         </button>
         <button class="nav-item" data-page="bills">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
@@ -258,7 +258,65 @@
 
       <!-- ================= INVESTMENTS ================= -->
       <section class="page" id="page-investments">
-        <h1 class="page-title">Investments</h1>
+        <h1 class="page-title">Savings &amp; Investments</h1>
+
+        <section class="summary-grid four">
+          <div class="card">
+            <h2>Cash Balance</h2>
+            <p class="amount" id="networth-cash">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Savings</h2>
+            <p class="amount" id="networth-savings">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Investments</h2>
+            <p class="amount" id="networth-investments">$0.00</p>
+          </div>
+          <div class="card">
+            <h2>Net Worth</h2>
+            <p class="amount" id="networth-total">$0.00</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Savings</h2>
+          <p class="hint">
+            Log your savings balance each month, along with any interest it earned.
+            The balance you enter should already include the interest.
+          </p>
+          <form id="savings-form">
+            <div class="form-row">
+              <label>
+                Date
+                <input type="date" id="savings-date" required />
+              </label>
+              <label>
+                Balance
+                <input type="number" id="savings-balance" step="0.01" min="0" placeholder="0.00" required />
+              </label>
+              <label>
+                Interest earned (optional)
+                <input type="number" id="savings-interest" step="0.01" min="0" placeholder="0.00" />
+              </label>
+            </div>
+            <button type="submit">Add Savings Entry</button>
+          </form>
+          <p class="hint" id="savings-interest-total"></p>
+          <table id="savings-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="amount-col">Balance</th>
+                <th class="amount-col">Interest</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="savings-body"></tbody>
+          </table>
+          <p id="savings-empty" class="hint">No savings entries yet — log your first balance above.</p>
+        </section>
+
         <section class="card">
           <h2>Log a Balance Snapshot</h2>
           <p class="hint">
@@ -283,21 +341,6 @@
             </div>
             <button type="submit">Add Snapshot</button>
           </form>
-        </section>
-
-        <section class="summary-grid">
-          <div class="card">
-            <h2>Cash Balance</h2>
-            <p class="amount" id="networth-cash">$0.00</p>
-          </div>
-          <div class="card">
-            <h2>Investments</h2>
-            <p class="amount" id="networth-investments">$0.00</p>
-          </div>
-          <div class="card">
-            <h2>Net Worth</h2>
-            <p class="amount" id="networth-total">$0.00</p>
-          </div>
         </section>
 
         <section class="card">
@@ -479,6 +522,13 @@
               <input type="number" id="set-cash-input" step="0.01" placeholder="0.00" />
             </label>
             <button type="button" id="set-cash-btn">Set Cash Balance</button>
+          </div>
+          <div class="form-row">
+            <label>
+              Current savings balance
+              <input type="number" id="set-savings-input" step="0.01" placeholder="0.00" />
+            </label>
+            <button type="button" id="set-savings-btn">Set Savings Balance</button>
           </div>
           <div class="form-row">
             <label>

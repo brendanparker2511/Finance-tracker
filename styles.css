@@ -222,6 +222,9 @@ body {
   gap: 16px;
 }
 
+.summary-grid.four { grid-template-columns: repeat(4, 1fr); }
+.summary-grid.four .amount { font-size: 1.4rem; }
+
 .summary-grid .amount { font-size: 1.8rem; font-weight: 700; margin: 4px 0 0; }
 .summary-grid .income .amount { color: var(--income); }
 .summary-grid .expense .amount { color: var(--expense); }
@@ -544,4 +547,21 @@ input:focus, select:focus {
 
 @media (max-width: 640px) {
   .summary-grid, .charts-grid, .networth-summary { grid-template-columns: 1fr; }
+  .summary-grid.four { grid-template-columns: repeat(2, 1fr); }
+
+  /* Budgets: restack each row (category / limit / spent on top, full-width
+     progress bar below) so the page flows vertically with no sideways scroll. */
+  #budgets-table thead { display: none; }
+  #budgets-table, #budgets-table tbody { display: block; width: 100%; }
+  #budgets-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  #budgets-table td { display: block; border: none; padding: 0; }
+  #budgets-table td:last-child { grid-column: 1 / -1; }
+  #budgets-table .budget-bar { min-width: 0; width: 100%; }
 }

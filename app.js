@@ -16,6 +16,7 @@ const STORAGE_KEY = "finance-tracker-transactions";
 const BUDGET_KEY = "finance-tracker-budgets";
 const INVESTMENTS_KEY = "finance-tracker-investments";
 const BILLS_KEY = "finance-tracker-bills";
+const SAVINGS_KEY = "finance-tracker-savings";
 
 const CATEGORIES = [
   "Income", "Housing", "Groceries", "Transport", "Utilities",
@@ -81,10 +82,20 @@ function saveBills(bills) {
   localStorage.setItem(BILLS_KEY, JSON.stringify(bills));
 }
 
+function loadSavings() {
+  const raw = localStorage.getItem(SAVINGS_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveSavings(savings) {
+  localStorage.setItem(SAVINGS_KEY, JSON.stringify(savings));
+}
+
 let transactions = loadTransactions();
 let budgets = loadBudgets(); // { categoryName: monthlyLimit }
 let investments = loadInvestments(); // [{ id, date, accountName, balance }]
 let bills = loadBills(); // [{ id, name, category, amount, dueDay }]
+let savings = loadSavings(); // [{ id, date, balance, interest }]
 
 // ---------------------------------------------------------------------------
 // DOM references
@@ -111,6 +122,15 @@ const investmentsEmpty = document.getElementById("investments-empty");
 const networthCashEl = document.getElementById("networth-cash");
 const networthInvestmentsEl = document.getElementById("networth-investments");
 const networthTotalEl = document.getElementById("networth-total");
+const networthSavingsEl = document.getElementById("networth-savings");
+
+const savingsForm = document.getElementById("savings-form");
+const savingsDateInput = document.getElementById("savings-date");
+const savingsBalanceInput = document.getElementById("savings-balance");
+const savingsInterestInput = document.getElementById("savings-interest");
+const savingsBody = document.getElementById("savings-body");
+const savingsEmpty = document.getElementById("savings-empty");
+const savingsInterestTotal = document.getElementById("savings-interest-total");
 
 const billForm = document.getElementById("bill-form");
 const billNameInput = document.getElementById("bill-name");
@@ -145,6 +165,8 @@ const setCashBtn = document.getElementById("set-cash-btn");
 const setInvestAccount = document.getElementById("set-invest-account");
 const setInvestBalance = document.getElementById("set-invest-balance");
 const setInvestBtn = document.getElementById("set-invest-btn");
+const setSavingsInput = document.getElementById("set-savings-input");
+const setSavingsBtn = document.getElementById("set-savings-btn");
 const setBalancesStatus = document.getElementById("set-balances-status");
 const eraseAllBtn = document.getElementById("erase-all-btn");
 
@@ -247,7 +269,7 @@ accentPicker.addEventListener("click", (e) => {
 // Backup & restore (export/import all data as a JSON file)
 // ---------------------------------------------------------------------------
 
-const DATA_KEYS = [STORAGE_KEY, BUDGET_KEY, INVESTMENTS_KEY, BILLS_KEY];
+const DATA_KEYS = [STORAGE_KEY, BUDGET_KEY, INVESTMENTS_KEY, BILLS_KEY, SAVINGS_KEY];
 
 exportDataBtn.addEventListener("click", () => {
   const backup = { exportedAt: new Date().toISOString() };
@@ -278,6 +300,7 @@ importDataInput.addEventListener("change", (e) => {
       budgets = loadBudgets();
       investments = loadInvestments();
       bills = loadBills();
+      savings = loadSavings();
       renderAll();
 
       importStatus.textContent = `Backup restored (exported ${backup.exportedAt ? new Date(backup.exportedAt).toLocaleString() : "unknown date"}).`;
@@ -350,6 +373,27 @@ setInvestBtn.addEventListener("click", () => {
   setBalancesStatus.textContent = `${accountName} set to ${money(balance)}.`;
 });
 
+setSavingsBtn.addEventListener("click", () => {
+  const balance = parseFloat(setSavingsInput.value);
+
+  if (isNaN(balance)) {
+    setBalancesStatus.textContent = "Enter your current savings balance first.";
+    return;
+  }
+
+  savings.push({
+    id: crypto.randomUUID(),
+    date: new Date().toISOString().slice(0, 10),
+    balance,
+    interest: 0,
+  });
+
+  saveSavings(savings);
+  renderAll();
+  setSavingsInput.value = "";
+  setBalancesStatus.textContent = `Savings set to ${money(balance)}.`;
+});
+
 // ---------------------------------------------------------------------------
 // Erase all data (Settings danger zone)
 // ---------------------------------------------------------------------------
@@ -365,6 +409,7 @@ eraseAllBtn.addEventListener("click", () => {
   budgets = {};
   investments = [];
   bills = [];
+  savings = [];
   renderAll();
   setBalancesStatus.textContent = "";
   importStatus.textContent = "All data erased.";
@@ -486,13 +531,76 @@ function totalInvestments() {
   return Object.values(latest).reduce((sum, a) => sum + a.balance, 0);
 }
 
+// The current savings balance is whatever the most recent entry says.
+function totalSavings() {
+  if (savings.length === 0) return 0;
+  const latest = savings.reduce((a, b) => (b.date >= a.date ? b : a));
+  return latest.balance;
+}
+
+function totalInterestEarned() {
+  return savings.reduce((sum, s) => sum + (s.interest || 0), 0);
+}
+
 function renderNetWorthSummary() {
   const cash = cashBalance();
+  const savingsTotal = totalSavings();
   const investmentsTotal = totalInvestments();
   networthCashEl.textContent = money(cash);
+  networthSavingsEl.textContent = money(savingsTotal);
   networthInvestmentsEl.textContent = money(investmentsTotal);
-  networthTotalEl.textContent = money(cash + investmentsTotal);
+  networthTotalEl.textContent = money(cash + savingsTotal + investmentsTotal);
 }
+
+// ---------------------------------------------------------------------------
+// Rendering: savings
+// ---------------------------------------------------------------------------
+
+function renderSavings() {
+  savingsEmpty.classList.toggle("hidden", savings.length > 0);
+
+  const interestTotal = totalInterestEarned();
+  savingsInterestTotal.textContent = interestTotal > 0
+    ? `Interest earned to date: ${money(interestTotal)}.`
+    : "";
+
+  const rows = savings.slice().sort((a, b) => b.date.localeCompare(a.date));
+  savingsBody.innerHTML = rows.map(s => `
+    <tr>
+      <td>${s.date}</td>
+      <td class="amount-col">${money(s.balance)}</td>
+      <td class="amount-col">${s.interest ? money(s.interest) : "—"}</td>
+      <td class="row-actions">
+        <button class="icon-btn delete-savings-btn" data-id="${s.id}" title="Delete">${ICONS.trash}</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+savingsBody.addEventListener("click", (e) => {
+  const btn = e.target.closest(".delete-savings-btn");
+  if (!btn) return;
+  savings = savings.filter(s => s.id !== btn.dataset.id);
+  saveSavings(savings);
+  renderAll();
+});
+
+savingsForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const date = savingsDateInput.value;
+  const balance = parseFloat(savingsBalanceInput.value);
+  const interest = parseFloat(savingsInterestInput.value) || 0;
+
+  if (!date || isNaN(balance)) return;
+
+  savings.push({ id: crypto.randomUUID(), date, balance, interest });
+  saveSavings(savings);
+  renderAll();
+
+  savingsForm.reset();
+  savingsDateInput.value = date;
+});
 
 function renderInvestmentsTable() {
   const rows = investments.slice().sort((a, b) => b.date.localeCompare(a.date));
@@ -741,7 +849,7 @@ function renderBills() {
 // ---------------------------------------------------------------------------
 
 function renderDashboard() {
-  dashboardNetworthEl.textContent = money(cashBalance() + totalInvestments());
+  dashboardNetworthEl.textContent = money(cashBalance() + totalSavings() + totalInvestments());
   renderUpcomingBillsList(dashboardUpcomingBillsEl, dashboardBillsEmptyEl, 5);
   renderDashboardRecentTransactions();
 }
@@ -970,6 +1078,7 @@ function renderAll() {
   renderCharts();
   renderBudgets();
   renderInvestments();
+  renderSavings();
   renderBills();
   renderDashboard();
 }
@@ -1376,6 +1485,7 @@ populateCategoryDropdowns();
 populateBillCategoryDropdown();
 document.getElementById("input-date").value = new Date().toISOString().slice(0, 10);
 investmentDateInput.value = new Date().toISOString().slice(0, 10);
+savingsDateInput.value = new Date().toISOString().slice(0, 10);
 renderAll();
 initScrollReveal();
 
