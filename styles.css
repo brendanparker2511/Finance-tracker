@@ -269,6 +269,12 @@ button.secondary {
   border: 1px solid var(--border);
 }
 
+button.danger {
+  background: var(--expense);
+}
+
+.danger-zone { border-color: var(--expense); }
+
 .form-row:has(#form-submit-btn) { align-items: flex-end; }
 
 .hint { color: var(--muted); font-size: 0.85rem; }
@@ -530,6 +536,10 @@ input:focus, select:focus {
   }
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
   .page-content { padding: 16px; }
+
+  /* Wide tables and the bills calendar scroll inside their card instead of
+     stretching the whole page past the phone's screen edge. */
+  .card { overflow-x: auto; }
 }
 
 @media (max-width: 640px) {

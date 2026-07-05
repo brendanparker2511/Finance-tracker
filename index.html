@@ -467,14 +467,40 @@
         </section>
 
         <section class="card">
-          <h2>Install on Your Phone</h2>
+          <h2>Set Current Balances</h2>
           <p class="hint">
-            This app can be installed like a native app, with no app store required.
+            Bring the app in line with reality without logging every past transaction.
+            Enter your actual bank balance and we'll record a one-time adjustment; investment
+            account values are set the same way as snapshots on the Investments page.
           </p>
+          <div class="form-row">
+            <label>
+              Actual cash balance (from your bank)
+              <input type="number" id="set-cash-input" step="0.01" placeholder="0.00" />
+            </label>
+            <button type="button" id="set-cash-btn">Set Cash Balance</button>
+          </div>
+          <div class="form-row">
+            <label>
+              Investment account
+              <input type="text" id="set-invest-account" placeholder="e.g. IBKR" />
+            </label>
+            <label>
+              Current value
+              <input type="number" id="set-invest-balance" step="0.01" placeholder="0.00" />
+            </label>
+            <button type="button" id="set-invest-btn">Set Investment Value</button>
+          </div>
+          <p id="set-balances-status" class="hint"></p>
+        </section>
+
+        <section class="card danger-zone">
+          <h2>Danger Zone</h2>
           <p class="hint">
-            <strong>iPhone (Safari):</strong> tap the Share icon, then "Add to Home Screen".<br />
-            <strong>Android (Chrome):</strong> tap the ⋮ menu, then "Add to Home screen" / "Install app".
+            Permanently delete all transactions, budgets, bills, and investment snapshots from
+            this browser. Consider exporting a backup first — this cannot be undone.
           </p>
+          <button type="button" id="erase-all-btn" class="danger">Erase All Data</button>
         </section>
       </section>
 

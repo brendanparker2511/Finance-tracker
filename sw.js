@@ -1,4 +1,4 @@
-const CACHE_NAME = "finance-tracker-v5";
+const CACHE_NAME = "finance-tracker-v6";
 
 const ASSETS = [
   "./",
@@ -28,19 +28,22 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first: serve from cache when available, otherwise fetch from the
-// network and store a copy for next time. Keeps the app usable offline.
+// Network-first: always try to fetch the latest version, updating the cache
+// as we go, and only fall back to the cached copy when offline. This is why
+// the installed phone app picks up new deploys on the next open instead of
+// serving stale files indefinitely (the old cache-first behavior).
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         if (response.ok) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });

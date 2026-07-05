@@ -140,6 +140,13 @@ const accentPicker = document.getElementById("accent-picker");
 const exportDataBtn = document.getElementById("export-data-btn");
 const importDataInput = document.getElementById("import-data-input");
 const importStatus = document.getElementById("import-status");
+const setCashInput = document.getElementById("set-cash-input");
+const setCashBtn = document.getElementById("set-cash-btn");
+const setInvestAccount = document.getElementById("set-invest-account");
+const setInvestBalance = document.getElementById("set-invest-balance");
+const setInvestBtn = document.getElementById("set-invest-btn");
+const setBalancesStatus = document.getElementById("set-balances-status");
+const eraseAllBtn = document.getElementById("erase-all-btn");
 
 // ---------------------------------------------------------------------------
 // Sidebar page navigation
@@ -280,6 +287,87 @@ importDataInput.addEventListener("change", (e) => {
   };
   reader.readAsText(file);
   importDataInput.value = "";
+});
+
+// ---------------------------------------------------------------------------
+// Set current balances (Settings)
+//
+// Rather than editing the calculated balance directly, we record a one-time
+// adjustment transaction for the difference — that keeps every number in the
+// app explainable by the transaction list.
+// ---------------------------------------------------------------------------
+
+setCashBtn.addEventListener("click", () => {
+  const target = parseFloat(setCashInput.value);
+  if (isNaN(target)) {
+    setBalancesStatus.textContent = "Enter your actual bank balance first.";
+    return;
+  }
+
+  const current = cashBalance();
+  const diff = Math.round((target - current) * 100) / 100;
+
+  if (diff === 0) {
+    setBalancesStatus.textContent = "Cash balance already matches — nothing to adjust.";
+    return;
+  }
+
+  transactions.push({
+    id: crypto.randomUUID(),
+    date: new Date().toISOString().slice(0, 10),
+    description: "Balance adjustment",
+    category: "Other",
+    type: diff > 0 ? "income" : "expense",
+    amount: Math.abs(diff),
+  });
+
+  saveTransactions(transactions);
+  renderAll();
+  setCashInput.value = "";
+  setBalancesStatus.textContent = `Cash balance set to ${money(target)} (recorded a ${money(Math.abs(diff))} adjustment).`;
+});
+
+setInvestBtn.addEventListener("click", () => {
+  const accountName = setInvestAccount.value.trim();
+  const balance = parseFloat(setInvestBalance.value);
+
+  if (!accountName || isNaN(balance)) {
+    setBalancesStatus.textContent = "Enter both an account name and its current value.";
+    return;
+  }
+
+  investments.push({
+    id: crypto.randomUUID(),
+    date: new Date().toISOString().slice(0, 10),
+    accountName,
+    balance,
+  });
+
+  saveInvestments(investments);
+  renderAll();
+  setInvestAccount.value = "";
+  setInvestBalance.value = "";
+  setBalancesStatus.textContent = `${accountName} set to ${money(balance)}.`;
+});
+
+// ---------------------------------------------------------------------------
+// Erase all data (Settings danger zone)
+// ---------------------------------------------------------------------------
+
+eraseAllBtn.addEventListener("click", () => {
+  const confirmed = confirm(
+    "Erase ALL transactions, budgets, bills, and investment snapshots from this browser?\n\nThis cannot be undone. Export a backup first if you might want this data back."
+  );
+  if (!confirmed) return;
+
+  DATA_KEYS.forEach(key => localStorage.removeItem(key));
+  transactions = [];
+  budgets = {};
+  investments = [];
+  bills = [];
+  renderAll();
+  setBalancesStatus.textContent = "";
+  importStatus.textContent = "All data erased.";
 });
 
 // ---------------------------------------------------------------------------
