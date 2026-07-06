@@ -33,6 +33,7 @@
 
   #reticle { position:absolute; top:50%; left:50%; width:4px; height:4px; margin:-2px; border-radius:50%; background:rgba(220,215,195,.65); box-shadow:0 0 4px #000; }
   #prompt { position:absolute; top:56%; left:50%; transform:translateX(-50%); font-size:14px; letter-spacing:2px; color:#e0dac6; text-shadow:0 2px 5px #000; background:rgba(0,0,0,.35); padding:4px 12px; display:none; }
+  #lockhint { position:absolute; bottom:70px; left:50%; transform:translateX(-50%); font-size:12px; letter-spacing:2px; color:#c9a86a; text-shadow:0 2px 5px #000; background:rgba(0,0,0,.5); padding:5px 14px; display:none; animation:pulse 1.6s infinite; }
 
   #subs { position:absolute; bottom:14%; left:50%; transform:translateX(-50%); width:70%; max-width:760px; text-align:center; font-family:Georgia, serif; font-style:italic; font-size:19px; line-height:1.5; color:#ddd6c2; text-shadow:0 2px 8px #000, 0 0 20px rgba(0,0,0,.9); opacity:0; transition:opacity .5s; }
   #subs.whisper { font-size:15px; color:#9b93a8; letter-spacing:3px; }
@@ -98,6 +99,7 @@
     <div id="breathbar"><div id="breath"></div></div>
   </div>
   <div id="reticle"></div>
+  <div id="lockhint">MOUSE-LOOK BLOCKED HERE — HOLD LEFT BUTTON AND DRAG TO LOOK</div>
   <div id="prompt"></div>
   <div id="subs"></div>
 </div>

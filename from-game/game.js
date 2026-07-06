@@ -1,5 +1,7 @@
 // FROM — NIGHTFALL · a fan-made browser survival horror
 import * as THREE from 'three';
+import {GLTFLoader} from './lib/loaders/GLTFLoader.js';
+import {clone as skClone} from './lib/utils/SkeletonUtils.js';
 
 /* ───────────────────── helpers ───────────────────── */
 const R  = (a,b)=>a+Math.random()*(b-a);
@@ -113,70 +115,65 @@ function groundH(x,z){
 }
 const GSIZE=520;
 const w2c=(v,S)=> (v+GSIZE/2)/GSIZE*S;
-const groundTexture = canvasTex(2048,2048,(g,S)=>{
-  g.fillStyle='#252c1f'; g.fillRect(0,0,S,S);
-  for(let i=0;i<11000;i++){
-    const v=R(0,1);
-    g.fillStyle=`rgba(${28+v*34},${38+v*34},${24+v*22},.4)`;
-    g.fillRect(R(0,S),R(0,S),R(2,7),R(2,7));
+/* (ground is now PBR-textured; roads are drawn as an overlay at terrain build time) */
+const faceTexture = canvasTex(512,512,(g)=>{
+  // waxy, bloodless skin
+  g.fillStyle='#cfc0a4'; g.fillRect(0,0,512,512);
+  let rg=g.createRadialGradient(256,220,60,256,256,300);
+  rg.addColorStop(0,'rgba(255,246,224,.35)'); rg.addColorStop(.6,'rgba(0,0,0,0)'); rg.addColorStop(1,'rgba(38,24,20,.75)');
+  g.fillStyle=rg; g.fillRect(0,0,512,512);
+  // mottling
+  for(let i=0;i<260;i++){
+    g.fillStyle=`rgba(${110+R(0,60)},${80+R(0,50)},${60+R(0,40)},${R(.03,.09)})`;
+    g.beginPath(); g.ellipse(R(30,482),R(30,482),R(4,26),R(3,16),R(0,3),0,7); g.fill();
   }
-  function road(x1,z1,x2,z2,w,col){
-    g.strokeStyle=col; g.lineWidth=w/GSIZE*S; g.lineCap='round';
-    g.beginPath(); g.moveTo(w2c(x1,S),w2c(z1,S)); g.lineTo(w2c(x2,S),w2c(z2,S)); g.stroke();
+  // gaunt hollows
+  for(const s of [[128,300],[384,300]]){
+    rg=g.createRadialGradient(s[0],s[1],8,s[0],s[1],80);
+    rg.addColorStop(0,'rgba(60,36,28,.5)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=rg; g.beginPath(); g.arc(s[0],s[1],80,0,7); g.fill();
   }
-  road(0,134,0,-96,9,'#3e3c37'); road(0,134,0,-96,7,'#464440');
-  road(-112,0,112,0,8,'#3e3c37'); road(-112,0,112,0,6.4,'#464440');
-  road(0,-96,0,-152,5,'#4a4234');            // dirt path up the hill
-  // scattered gravel noise on roads
-  for(let i=0;i<2600;i++){
-    const onMain=Math.random()<.6;
-    const x=onMain?R(-4,4):R(-110,110), z=onMain?R(-150,132):R(-3.5,3.5);
-    g.fillStyle=`rgba(${60+R(0,30)},${58+R(0,26)},${52+R(0,22)},.35)`;
-    g.fillRect(w2c(x,S),w2c(z,S),2,2);
+  // deep eye sockets, tiny bright pupils
+  for(const ex of [172,340]){
+    rg=g.createRadialGradient(ex,192,4,ex,192,58);
+    rg.addColorStop(0,'rgba(8,4,4,.95)'); rg.addColorStop(.55,'rgba(30,16,12,.75)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=rg; g.beginPath(); g.ellipse(ex,192,52,40,0,0,7); g.fill();
+    g.fillStyle='#0a0605';
+    g.beginPath(); g.ellipse(ex,196,20,26,0,0,7); g.fill();
+    g.fillStyle='#f2ead6';
+    g.beginPath(); g.arc(ex+5,188,3.4,0,7); g.fill();
   }
-  // dirt aprons at buildings + crop rows at the farm
-  g.fillStyle='rgba(64,56,40,.55)';
-  [[20,-8],[ -24,-34],[-26,26],[24,34],[-22,68],[30,-46],[-72,-14],[0,-150]].forEach(p=>{
-    g.beginPath(); g.ellipse(w2c(p[0],S),w2c(p[1],S),34,26,0,0,7); g.fill();
-  });
-  g.strokeStyle='rgba(58,44,30,.8)'; g.lineWidth=4;
-  for(let i=0;i<7;i++){
-    g.beginPath(); g.moveTo(w2c(-84,S),w2c(2+i*3,S)); g.lineTo(w2c(-62,S),w2c(2+i*3,S)); g.stroke();
-  }
-});
-const faceTexture = canvasTex(256,256,(g)=>{
-  g.fillStyle='#dccdb2'; g.fillRect(0,0,256,256);
-  const rg=g.createRadialGradient(128,120,40,128,128,150);
-  rg.addColorStop(0,'rgba(0,0,0,0)'); rg.addColorStop(1,'rgba(60,40,30,.55)');
-  g.fillStyle=rg; g.fillRect(0,0,256,256);
-  // sunken cheeks
-  g.strokeStyle='rgba(90,60,45,.5)'; g.lineWidth=7;
-  g.beginPath(); g.arc(70,150,34,-.6,1.2); g.stroke();
-  g.beginPath(); g.arc(186,150,34,Math.PI-1.2,Math.PI+.6); g.stroke();
-  // eyes — small, dark, delighted
-  for(const ex of [88,168]){
-    g.fillStyle='rgba(70,50,40,.5)';
-    g.beginPath(); g.ellipse(ex,96,20,14,0,0,7); g.fill();
-    g.fillStyle='#120c0a';
-    g.beginPath(); g.ellipse(ex,98,9,13,0,0,7); g.fill();
-    g.fillStyle='#e8e2d2';
-    g.beginPath(); g.arc(ex+3,93,2.4,0,7); g.fill();
-  }
-  // the grin
-  g.fillStyle='#1c0e0d';
+  // brow shadow
+  g.strokeStyle='rgba(40,24,18,.55)'; g.lineWidth=10;
+  g.beginPath(); g.moveTo(110,152); g.quadraticCurveTo(172,136,232,156); g.stroke();
+  g.beginPath(); g.moveTo(280,156); g.quadraticCurveTo(340,136,402,152); g.stroke();
+  // nose shadow
+  g.strokeStyle='rgba(60,36,26,.4)'; g.lineWidth=7;
+  g.beginPath(); g.moveTo(256,210); g.lineTo(248,278); g.stroke();
+  // THE GRIN — too wide, cheek to cheek
+  g.fillStyle='#170a09';
   g.beginPath();
-  g.moveTo(50,146); g.quadraticCurveTo(128,222,206,146); g.quadraticCurveTo(128,176,50,146);
+  g.moveTo(86,300); g.quadraticCurveTo(256,452,426,300); g.quadraticCurveTo(256,352,86,300);
   g.fill();
-  g.strokeStyle='#553f33'; g.lineWidth=4;
-  g.beginPath(); g.moveTo(50,146); g.quadraticCurveTo(128,222,206,146); g.stroke();
-  // teeth along the upper curve
-  g.fillStyle='#cabb9c';
-  for(let t=.08;t<=.92;t+=.084){
-    const x=lerp(lerp(50,128,t),lerp(128,206,t),t);
-    const yTop=lerp(lerp(146,176,t),lerp(176,146,t),t);
-    const yBot=lerp(lerp(146,222,t),lerp(222,146,t),t);
-    g.fillRect(x-4, yTop+1, 8, clamp((yBot-yTop)*.52,4,20));
+  // grin creases
+  g.strokeStyle='rgba(45,26,20,.8)'; g.lineWidth=6;
+  g.beginPath(); g.moveTo(86,300); g.quadraticCurveTo(256,452,426,300); g.stroke();
+  g.beginPath(); g.moveTo(80,288); g.quadraticCurveTo(70,310,88,330); g.stroke();
+  g.beginPath(); g.moveTo(432,288); g.quadraticCurveTo(442,310,424,330); g.stroke();
+  // irregular teeth
+  for(let t=.06;t<=.94;t+=.062){
+    const x=lerp(lerp(86,256,t),lerp(256,426,t),t);
+    const yTop=lerp(lerp(300,352,t),lerp(352,300,t),t);
+    const yBot=lerp(lerp(300,452,t),lerp(452,300,t),t);
+    const h=clamp((yBot-yTop)*R(.4,.62),8,44), w=R(9,15);
+    g.fillStyle=`rgb(${190+R(-30,15)|0},${176+R(-34,12)|0},${142+R(-30,12)|0})`;
+    g.fillRect(x-w/2, yTop+2, w, h);
+    g.strokeStyle='rgba(30,16,12,.5)'; g.lineWidth=2;
+    g.strokeRect(x-w/2, yTop+2, w, h);
   }
+  // wet lower-lip highlight
+  g.strokeStyle='rgba(240,230,210,.18)'; g.lineWidth=5;
+  g.beginPath(); g.moveTo(140,388); g.quadraticCurveTo(256,436,372,388); g.stroke();
 });
 const wardTexture = canvasTex(128,128,(g)=>{
   g.clearRect(0,0,128,128);
@@ -224,11 +221,41 @@ let basePR=Math.min(window.devicePixelRatio||1,1.5), curPR=basePR;
 renderer.setPixelRatio(curPR);
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05;
+renderer.toneMapping=THREE.NoToneMapping;   // filmic curve lives in the post shader
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
+
+/* ── post processing: filmic tonemap + grain + vignette + chromatic aberration ── */
+const postRT=new THREE.WebGLRenderTarget(2,2,{type:THREE.HalfFloatType});
+const postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+const postMat=new THREE.ShaderMaterial({
+  uniforms:{ tD:{value:postRT.texture}, uT:{value:0},
+             uGrain:{value:.05}, uVig:{value:.34}, uCA:{value:.0015}, uExp:{value:1.25} },
+  vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }',
+  fragmentShader:`
+    uniform sampler2D tD; uniform float uT,uGrain,uVig,uCA,uExp; varying vec2 vUv;
+    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+    void main(){
+      vec2 c=vUv-.5; float r2=dot(c,c);
+      vec2 off=c*uCA*(1.+r2*4.);
+      vec3 col;
+      col.r=texture2D(tD,vUv+off).r;
+      col.g=texture2D(tD,vUv).g;
+      col.b=texture2D(tD,vUv-off).b;
+      col=vec3(1.)-exp(-col*uExp);                 // filmic-ish
+      col=pow(col,vec3(1./2.2));                   // to sRGB
+      col=mix(vec3(dot(col,vec3(.299,.587,.114))),col,.88); // slight desaturate
+      float g=hash(vUv*vec2(1613.,907.)+vec2(mod(uT*57.,977.)));
+      col+=(g-.5)*uGrain*(1.-r2*.4);
+      col*=1.-uVig*smoothstep(.12,.72,r2);
+      gl_FragColor=vec4(col,1.);
+    }`,
+  depthTest:false, depthWrite:false });
+const postScene=new THREE.Scene();
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMat));
+function sizeRT(){ const pr=renderer.getPixelRatio(); postRT.setSize(Math.floor(innerWidth*pr),Math.floor(innerHeight*pr)); }
+sizeRT();
 
 const scene=new THREE.Scene();
 scene.fog=new THREE.FogExp2(0x8d9793,.0085);
@@ -239,6 +266,7 @@ scene.add(camera);
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);
+  sizeRT();
 });
 
 const hemi=new THREE.HemisphereLight(0x9aa5b0,0x2a2620,.55); scene.add(hemi);
@@ -279,13 +307,38 @@ const lootPts=[];
 const monsters=[];
 let graveGroup=new THREE.Group(); scene.add(graveGroup);
 
-const matWood =new THREE.MeshLambertMaterial({color:0x5c4b38});
+/* PBR textures (Polyhaven, CC0) */
+const TL=new THREE.TextureLoader();
+const MAXANISO=renderer.capabilities.getMaxAnisotropy();
+function ldTex(f,srgb,rx,ry){
+  const t=TL.load('tex/'+f);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  if(srgb) t.colorSpace=THREE.SRGBColorSpace;
+  if(rx) t.repeat.set(rx,ry||rx);
+  t.anisotropy=Math.min(8,MAXANISO);
+  return t;
+}
+const TEX={
+  ground_d:ldTex('ground_d.jpg',true,90), ground_n:ldTex('ground_n.jpg',false,90),
+  wall_d:ldTex('wall_d.jpg',true),        wall_n:ldTex('wall_n.jpg',false),
+  roof_d:ldTex('roof_d.jpg',true,2,1.4),  roof_n:ldTex('roof_n.jpg',false,2,1.4),
+  floor_d:ldTex('floor_d.jpg',true,3,2),  floor_n:ldTex('floor_n.jpg',false,3,2),
+  bark_d:ldTex('bark_d.jpg',true,1,2),    bark_n:ldTex('bark_n.jpg',false,1,2),
+  wood_d:ldTex('wood_d.jpg',true),        wood_n:ldTex('wood_n.jpg',false),
+};
+const matWood =new THREE.MeshStandardMaterial({map:TEX.wood_d,normalMap:TEX.wood_n,roughness:.92,metalness:0,color:0xb0a494});
 const matDark =new THREE.MeshLambertMaterial({color:0x2c2620});
-const matRoof =new THREE.MeshLambertMaterial({color:0x37322c});
-const matFloor=new THREE.MeshLambertMaterial({color:0x4a4034});
-const matBed  =new THREE.MeshLambertMaterial({color:0x6b6455});
-const matWin  =new THREE.MeshLambertMaterial({color:0x0b0d12});
-const wallCols=[0x6b5f4e,0x5d5a52,0x635648,0x57503f,0x6a6154,0x4f4a44];
+const matRoof =new THREE.MeshStandardMaterial({map:TEX.roof_d,normalMap:TEX.roof_n,roughness:.95,metalness:0,color:0x9a938c});
+const matFloor=new THREE.MeshStandardMaterial({map:TEX.floor_d,normalMap:TEX.floor_n,roughness:.9,metalness:0,color:0x9a8f80});
+const matBed  =new THREE.MeshLambertMaterial({color:0x565043});
+const matWin  =new THREE.MeshStandardMaterial({color:0x05070a,roughness:.22,metalness:.65});
+const wallCols=[0xa89d8c,0x999588,0xa09484,0x968d7b,0xa39a86,0x8d8880];
+function wallMaterial(id,w,h){
+  const m=new THREE.MeshStandardMaterial({roughness:.95,metalness:0,color:wallCols[id%wallCols.length]});
+  m.map=TEX.wall_d.clone();  m.map.repeat.set(Math.max(1,w/3.2),Math.max(1,h/2.8));
+  m.normalMap=TEX.wall_n.clone(); m.normalMap.repeat.copy(m.map.repeat);
+  return m;
+}
 
 function addBox(px,py,pz,sx,sy,sz,mat,o={}){
   const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat);
@@ -300,14 +353,45 @@ function addBox(px,py,pz,sx,sy,sz,mat,o={}){
 }
 
 /* ───────────────────── terrain / forest ───────────────────── */
+let groundGeo;
 {
-  const gg=new THREE.PlaneGeometry(GSIZE,GSIZE,120,120);
-  gg.rotateX(-Math.PI/2);
-  const pa=gg.attributes.position;
+  groundGeo=new THREE.PlaneGeometry(GSIZE,GSIZE,120,120);
+  groundGeo.rotateX(-Math.PI/2);
+  const pa=groundGeo.attributes.position;
   for(let i=0;i<pa.count;i++) pa.setY(i, groundH(pa.getX(i),pa.getZ(i)));
-  gg.computeVertexNormals();
-  const gm=new THREE.Mesh(gg,new THREE.MeshLambertMaterial({map:groundTexture}));
+  groundGeo.computeVertexNormals();
+  const gm=new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({
+    map:TEX.ground_d, normalMap:TEX.ground_n, roughness:1, metalness:0, color:0x8f9184}));
   gm.receiveShadow=true; scene.add(gm);
+}
+/* roads: asphalt splat draped over the terrain */
+{
+  const img=new Image();
+  img.onload=()=>{
+    const S=2048, c=document.createElement('canvas'); c.width=c.height=S;
+    const g=c.getContext('2d');
+    const pat=g.createPattern(img,'repeat');
+    pat.setTransform(new DOMMatrix([.09,0,0,.09,0,0]));
+    function road(x1,z1,x2,z2,w,style){
+      g.strokeStyle=style||pat; g.lineWidth=w/GSIZE*S; g.lineCap='round';
+      g.beginPath(); g.moveTo(w2c(x1,S),w2c(z1,S)); g.lineTo(w2c(x2,S),w2c(z2,S)); g.stroke();
+    }
+    g.globalAlpha=.96;
+    road(0,134,0,-96,9); road(-112,0,112,0,8);
+    g.globalAlpha=.85;
+    road(0,-96,0,-152,5,'rgba(96,80,54,.9)');   // dirt path up the hill
+    g.globalAlpha=.5;
+    [[20,-8],[-24,-34],[-26,26],[24,34],[-22,68],[30,-46],[-72,-14],[0,-150]]
+      .forEach(p=>{ g.fillStyle='rgba(88,74,50,.5)';
+        g.beginPath(); g.ellipse(w2c(p[0],S),w2c(p[1],S),30,24,0,0,7); g.fill(); });
+    const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace;
+    t.anisotropy=Math.min(8,MAXANISO);
+    const m=new THREE.Mesh(groundGeo,new THREE.MeshStandardMaterial({
+      map:t, transparent:true, roughness:.98, metalness:0,
+      polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2, depthWrite:false}));
+    m.renderOrder=1; m.receiveShadow=true; scene.add(m);
+  };
+  img.src='tex/road_d.jpg';
 }
 {
   const spots=[];
@@ -328,10 +412,10 @@ function addBox(px,py,pz,sx,sy,sz,mat,o={}){
     if(bad) continue;
     spots.push([x,z,R(.8,1.7)]);
   }
-  const trunkG=new THREE.CylinderGeometry(.22,.34,3.2,5);
-  const leafG=new THREE.ConeGeometry(2.3,7.5,6);
-  const trunkM=new THREE.MeshLambertMaterial({color:0x3a2f24});
-  const leafM=new THREE.MeshLambertMaterial({color:0x1c2418});
+  const trunkG=new THREE.CylinderGeometry(.22,.34,3.2,6);
+  const leafG=new THREE.ConeGeometry(2.3,7.5,7);
+  const trunkM=new THREE.MeshStandardMaterial({map:TEX.bark_d,normalMap:TEX.bark_n,roughness:.98,metalness:0});
+  const leafM=new THREE.MeshLambertMaterial({color:0x18211a});
   const trunks=new THREE.InstancedMesh(trunkG,trunkM,spots.length);
   const leaves=new THREE.InstancedMesh(leafG,leafM,spots.length);
   trunks.castShadow=leaves.castShadow=true;
@@ -417,8 +501,8 @@ function mkLoot(kind,x,y,z,noteIdx){
   else if(kind==='stone') mesh=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshLambertMaterial({color:0x777468}));
   else mesh=new THREE.Mesh(new THREE.PlaneGeometry(.3,.4),new THREE.MeshLambertMaterial({color:0xcfc4a4,side:THREE.DoubleSide}));
   mesh.position.set(x,y,z); mesh.rotation.y=R(0,6); mesh.castShadow=false; scene.add(mesh);
-  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture,transparent:true,opacity:.5,depthWrite:false}));
-  glow.scale.set(.7,.7,1); glow.position.set(x,y+.1,z); scene.add(glow);
+  const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture,transparent:true,opacity:.3,depthWrite:false}));
+  glow.scale.set(.42,.42,1); glow.position.set(x,y+.08,z); scene.add(glow);
   const pt={kind,x,y,z,taken:false,mesh,glow,noteIdx};
   lootPts.push(pt);
   interactables.push({
@@ -456,7 +540,7 @@ function makeBuilding(o){
   const {cx,cz,w,d,h,fy=0,side,warded=false,name,style}=o;
   const bld={id,cx,cz,w,d,h,fy,name,style,
     fp:{minX:cx-w/2+.2,maxX:cx+w/2-.2,minZ:cz-d/2+.2,maxZ:cz+d/2-.2}};
-  const wallMat=new THREE.MeshLambertMaterial({color:wallCols[id%wallCols.length]});
+  const wallMat=wallMaterial(id,w,h);
   addBox(cx,fy+.07,cz,w,.14,d,matFloor,{col:false,cast:false});
   const yC=fy+h/2;
   for(const s of ['N','S','E','W']){
@@ -692,7 +776,16 @@ function losBlocked(ax,ay,az,bx,by,bz){
 }
 
 /* ───────────────────── monsters ───────────────────── */
-const clothCols=[0x4a4038,0x3d4248,0x514438,0x2f3336,0x463b30];
+const clothCols=[0x24201c,0x1e2126,0x28221c,0x181b1e,0x231d18];
+const _HP=new THREE.Vector3();
+let MODEL=null;
+new GLTFLoader().load('./lib/Soldier.glb',(g)=>{
+  g.scene.traverse(o=>{ if(o.isMesh||o.isSkinnedMesh){ o.castShadow=true; o.receiveShadow=false; } });
+  MODEL=g;
+},undefined,()=>{ /* offline — procedural bodies still work */ });
+function faceMat(){
+  return new THREE.MeshLambertMaterial({map:faceTexture,emissiveMap:faceTexture,emissive:0x8f8066});
+}
 class Monster{
   constructor(x,z,scripted){
     this.x=x; this.z=z; this.yaw=0; this.dead=false;
@@ -706,7 +799,27 @@ class Monster{
     this.chaseAnnounced=false;
     this.buildMesh();
   }
+  buildGLTF(){
+    const g=new THREE.Group();
+    const inner=skClone(MODEL.scene);
+    const cloth=new THREE.MeshStandardMaterial({color:clothCols[RI(0,4)],roughness:.97,metalness:0});
+    inner.traverse(o=>{ if(o.isMesh||o.isSkinnedMesh){ o.material=cloth; o.castShadow=true; o.frustumCulled=false; } });
+    inner.rotation.y=Math.PI;   // model natively faces -Z; our forward is +Z
+    g.add(inner);
+    this.mixer=new THREE.AnimationMixer(inner);
+    const clip=THREE.AnimationClip.findByName(MODEL.animations,'Walk')||MODEL.animations[0];
+    this.mixer.clipAction(clip).play();
+    this.headBone=inner.getObjectByName('mixamorigHead');
+    this.head=new THREE.Group();
+    this.face=new THREE.Mesh(new THREE.CircleGeometry(.13,20),faceMat());
+    this.face.position.set(0,.07,.21);   // a pale mask floating just proud of the skull
+    this.head.add(this.face);
+    g.add(this.head);
+    const s=R(1.02,1.14); g.scale.setScalar(s);
+    this.mesh=g; scene.add(g);
+  }
   buildMesh(){
+    if(MODEL){ this.buildGLTF(); return; }
     const g=new THREE.Group();
     const cloth=new THREE.MeshLambertMaterial({color:clothCols[RI(0,4)]});
     const skin=new THREE.MeshLambertMaterial({color:0xd8c9ac});
@@ -728,8 +841,7 @@ class Monster{
     g.add(this.armL,this.armR);
     this.head=new THREE.Group(); this.head.position.y=1.98;
     const skull=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),skin); this.head.add(skull);
-    this.face=new THREE.Mesh(new THREE.CircleGeometry(.215,20),
-      new THREE.MeshLambertMaterial({map:faceTexture,emissiveMap:faceTexture,emissive:0x8f8066}));
+    this.face=new THREE.Mesh(new THREE.CircleGeometry(.215,20),faceMat());
     this.face.position.z=.17; this.head.add(this.face);
     const hair=new THREE.Mesh(new THREE.SphereGeometry(.25,10,8,0,Math.PI*2,0,1.2),matDark);
     hair.position.y=.06; hair.position.z=-.05; this.head.add(hair);
@@ -950,20 +1062,40 @@ class Monster{
       }
     }
     /* animate */
-    this.walkT+=this.spd*dt*2.4;
-    const sw=Math.sin(this.walkT);
-    this.legL.rotation.x=sw*.55; this.legR.rotation.x=-sw*.55;
-    this.armL.rotation.x=-sw*.4; this.armR.rotation.x=sw*.4;
     const gy=groundH(this.x,this.z);
-    this.mesh.position.set(this.x,gy+Math.abs(Math.cos(this.walkT))*.04,this.z);
     this.mesh.rotation.y=this.yaw;
-    // the head finds you
-    if(dP<45){
+    let rel=0;
+    {
       const ty=Math.atan2(P.x-this.x,P.z-this.z);
-      let rel=ty-this.yaw;
+      rel=ty-this.yaw;
       while(rel>Math.PI)rel-=Math.PI*2; while(rel<-Math.PI)rel+=Math.PI*2;
-      this.head.rotation.y=lerp(this.head.rotation.y,clamp(rel,-1.15,1.15),clamp(dt*3,0,1));
-    } else this.head.rotation.y=lerp(this.head.rotation.y,0,clamp(dt*2,0,1));
+    }
+    if(this.mixer){
+      this.mesh.position.set(this.x,gy,this.z);
+      this.mixer.timeScale=this.spd>.05?clamp(this.spd/1.5,.55,3.1):.12;
+      this.mixer.update(dt);
+      if(this.headBone){
+        // pin the face mask to the animated skull (bone axes are cm-scaled; track in world space)
+        this.headBone.getWorldPosition(_HP);
+        this.mesh.worldToLocal(_HP);
+        this.head.position.copy(_HP);
+        this.lookOff=lerp(this.lookOff||0, dP<45?clamp(rel,-1.1,1.1):0, clamp(dt*3,0,1));
+        this.head.rotation.y=this.lookOff;
+      }
+    } else {
+      this.walkT+=this.spd*dt*2.4;
+      const sw=Math.sin(this.walkT);
+      this.legL.rotation.x=sw*.55; this.legR.rotation.x=-sw*.55;
+      this.armL.rotation.x=-sw*.4; this.armR.rotation.x=sw*.4;
+      this.mesh.position.set(this.x,gy+Math.abs(Math.cos(this.walkT))*.04,this.z);
+      this.head.rotation.y=lerp(this.head.rotation.y, dP<45?clamp(rel,-1.15,1.15):0, clamp(dt*3,0,1));
+    }
+  }
+  headPos(v){
+    if(this.headBone) return this.headBone.getWorldPosition(v);
+    if(this.head) return this.head.getWorldPosition(v);
+    v.set(this.x,groundH(this.x,this.z)+2*this.mesh.scale.x,this.z);
+    return v;
   }
 }
 function monsterCount(d){ return clamp(2+Math.floor((d-1)/6),2,6)+(d>=15?1:0); }
@@ -1167,7 +1299,8 @@ function kill(m){
   if(P.hidden){ $('slits').style.display='none'; $('breathwrap').style.display='none'; }
   killer.yaw=Math.atan2(P.x-killer.x,P.z-killer.z);
   killer.mesh.rotation.y=killer.yaw;
-  killer.head.rotation.y=0;
+  if(killer.head) killer.head.rotation.y=0;
+  killer.lookOff=0;
   sfx.screech();
   $('red').style.opacity=.5;
 }
@@ -1353,6 +1486,9 @@ addEventListener('keydown',e=>{
   if(state!=='play') return;
   if(uiNote){ if(e.code==='KeyE'||e.code==='Escape') closeNote(); return; }
   if(uiCine) return;
+  if(e.code==='Escape'&&dragLook&&state==='play'){
+    state='pause'; $('pause').classList.add('show'); return;
+  }
   if(e.code==='KeyE'){
     if(P.hidden) exitHide();
     else if(currentPrompt) currentPrompt.act();
@@ -1366,19 +1502,38 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyC') P.crouch=!P.crouch;
 });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
-addEventListener('mousemove',e=>{
-  if(!document.pointerLockElement||state!=='play') return;
-  P.yaw-=e.movementX*.0022;
-  P.pitch=clamp(P.pitch-e.movementY*.0022,-1.5,1.5);
+let dragLook=false, dragging=false;
+function applyLook(mx,my){
+  P.yaw-=mx*.0022;
+  P.pitch=clamp(P.pitch-my*.0022,-1.5,1.5);
   if(P.hidden){
     let rel=P.yaw-P.baseYaw;
     while(rel>Math.PI)rel-=Math.PI*2; while(rel<-Math.PI)rel+=Math.PI*2;
     P.yaw=P.baseYaw+clamp(rel,-.7,.7);
     P.pitch=clamp(P.pitch,-.5,.5);
   }
+}
+addEventListener('mousemove',e=>{
+  if(state!=='play') return;
+  if(document.pointerLockElement) applyLook(e.movementX,e.movementY);
+  else if(dragLook&&dragging) applyLook(e.movementX,e.movementY);
 });
+addEventListener('mousedown',e=>{ if(e.button===0) dragging=true; });
+addEventListener('mouseup',()=>{ dragging=false; });
+addEventListener('blur',()=>{ dragging=false; });
+function lockFailed(){
+  if(dragLook) return;
+  dragLook=true;
+  const h=$('lockhint'); if(h) h.style.display='block';
+  setTimeout(()=>{ if(h) h.style.display='none'; },9000);
+}
+document.addEventListener('pointerlockerror',lockFailed);
 function tryLock(){
-  try{ renderer.domElement.requestPointerLock(); }catch(e){}
+  try{
+    const p=renderer.domElement.requestPointerLock();
+    if(p&&p.catch) p.catch(lockFailed);
+    setTimeout(()=>{ if(!document.pointerLockElement) lockFailed(); },700);
+  }catch(e){ lockFailed(); }
 }
 $('title').addEventListener('click',()=>{
   initAudio();
@@ -1390,7 +1545,7 @@ $('title').addEventListener('click',()=>{
 });
 $('pause').addEventListener('click',()=>{ tryLock(); $('pause').classList.remove('show'); state='play'; });
 document.addEventListener('pointerlockchange',()=>{
-  if(!document.pointerLockElement&&state==='play'&&!forced){
+  if(!document.pointerLockElement&&state==='play'&&!forced&&!dragLook){
     state='pause'; $('pause').classList.add('show');
   }
 });
@@ -1525,8 +1680,8 @@ function animate(){
   prAdjT+=dt;
   if(prAdjT>4){
     prAdjT=0;
-    if(fpsE<27&&curPR>.72){ curPR=Math.max(.72,curPR*.85); renderer.setPixelRatio(curPR); }
-    else if(fpsE>52&&curPR<basePR){ curPR=Math.min(basePR,curPR*1.1); renderer.setPixelRatio(curPR); }
+    if(fpsE<27&&curPR>.72){ curPR=Math.max(.72,curPR*.85); renderer.setPixelRatio(curPR); sizeRT(); }
+    else if(fpsE>52&&curPR<basePR){ curPR=Math.min(basePR,curPR*1.1); renderer.setPixelRatio(curPR); sizeRT(); }
   }
   const simming=state==='play'&&!uiNote&&!uiCine;
   if(simming){
@@ -1543,27 +1698,31 @@ function animate(){
     if(nd<16&&hbT<=0){ sfx.thump(clamp(1.2-nd/16,.12,.7)); hbT=clamp(nd/15,.35,1.05); }
   } else if(state==='dying'&&killer){
     dyingT+=dt;
-    const s=killer.mesh.scale.x;
-    const hy=groundH(killer.x,killer.z)+2.0*s;
+    if(killer.mixer){ killer.mixer.timeScale=.35; killer.mixer.update(dt); }
+    killer.headPos(_HP);
     const k=clamp(dt*5,0,1);
     camera.position.x=lerp(camera.position.x,killer.x+Math.sin(killer.yaw)*1.1,k);
     camera.position.z=lerp(camera.position.z,killer.z+Math.cos(killer.yaw)*1.1,k);
-    camera.position.y=lerp(camera.position.y,hy,k);
-    camera.lookAt(killer.x,hy,killer.z);
+    camera.position.y=lerp(camera.position.y,_HP.y,k);
+    camera.lookAt(_HP.x,_HP.y,_HP.z);
     camera.rotation.z=Math.sin(dyingT*22)*.03*(1-clamp(dyingT/1.6,0,1));
     if(dyingT>1.9){ camera.rotation.z=0; finishDeath(); }
   }
   tickSubs(dt);
   applyEnv();
   tickHUD();
+  postMat.uniforms.uT.value+=dt;
+  renderer.setRenderTarget(postRT);
   renderer.render(scene,camera);
+  renderer.setRenderTarget(null);
+  renderer.render(postScene,postCam);
 }
 buildGraves();
 animate();
 
 /* ───────────────────── debug hooks ───────────────────── */
 window.GAME={
-  ver:7,
+  ver:13,
   forceStart(){ forced=true; initAudio(); $('title').classList.remove('show'); state='play'; intro(); },
   look(y,p){ P.yaw=y; P.pitch=p??P.pitch; },
   tp(x,z){ P.x=x; P.z=z; },
@@ -1576,6 +1735,16 @@ window.GAME={
   spawnNear(d=18){ const m=new Monster(P.x-Math.sin(P.yaw)*d,P.z-Math.cos(P.yaw)*d,false); monsters.push(m); return monsters.length; },
   spawnAt(x,z){ const m=new Monster(x,z,false); monsters.push(m); return monsters.length; },
   hunt(){ for(const m of monsters){ m.state='chase'; m.lastSeen={x:P.x,z:P.z}; } },
+  probe(){
+    const m=monsters[0]; if(!m) return null;
+    const hp=new THREE.Vector3(); m.headPos(hp);
+    const fp=new THREE.Vector3(); if(m.face) m.face.getWorldPosition(fp);
+    const fwd=new THREE.Vector3(0,0,1);
+    if(m.headBone){ const q=new THREE.Quaternion(); m.headBone.getWorldQuaternion(q); fwd.applyQuaternion(q); }
+    return { pos:{x:+m.x.toFixed(2),z:+m.z.toFixed(2)}, yaw:+m.yaw.toFixed(2),
+             head:hp.toArray().map(v=>+v.toFixed(2)), face:fp.toArray().map(v=>+v.toFixed(2)),
+             boneZ:fwd.toArray().map(v=>+v.toFixed(2)) };
+  },
   monsters(){ return monsters.map(m=>({x:+m.x.toFixed(1),z:+m.z.toFixed(1),state:m.state})); },
   get fps(){ return Math.round(fpsE); },
   get state(){ return state; },
