@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FROM — Nightfall</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#000; }
+  body { font-family:"Courier New", monospace; color:#cfc9b8; user-select:none; }
+  canvas { display:block; }
+
+  .hud { position:fixed; inset:0; pointer-events:none; z-index:5; }
+  #topleft { position:absolute; top:18px; left:22px; text-shadow:0 2px 6px #000; }
+  #day { font-family:Georgia, serif; font-size:30px; letter-spacing:6px; color:#d8d2c0; }
+  #phase { font-size:13px; letter-spacing:4px; opacity:.85; margin-top:2px; }
+  #obj { font-size:12px; letter-spacing:1px; opacity:.55; margin-top:8px; max-width:280px; font-style:italic; }
+
+  #topright { position:absolute; top:20px; right:24px; text-align:right; text-shadow:0 2px 6px #000; font-size:13px; }
+  #batwrap { width:130px; height:9px; border:1px solid #7a745f; margin:6px 0 8px auto; background:rgba(0,0,0,.5); }
+  #bat { height:100%; background:#b7a44a; width:60%; transition:width .3s; }
+  #batlabel { font-size:11px; letter-spacing:2px; opacity:.7; }
+  #tal, #stn { margin-top:4px; letter-spacing:2px; }
+
+  #stamwrap { position:absolute; bottom:26px; left:50%; transform:translateX(-50%); width:220px; height:4px; background:rgba(255,255,255,.08); }
+  #stam { height:100%; background:#8b8672; width:100%; transition:width .1s linear; }
+
+  #breathwrap { position:absolute; bottom:60px; left:50%; transform:translateX(-50%); width:240px; text-align:center; display:none; }
+  #breathlabel { font-size:12px; letter-spacing:3px; color:#c96a5a; margin-bottom:6px; animation:pulse 1s infinite; }
+  #breathbar { width:100%; height:6px; border:1px solid #6b3d38; background:rgba(0,0,0,.6); }
+  #breath { height:100%; background:#a33c31; width:0%; }
+  @keyframes pulse { 50% { opacity:.4; } }
+
+  #reticle { position:absolute; top:50%; left:50%; width:4px; height:4px; margin:-2px; border-radius:50%; background:rgba(220,215,195,.65); box-shadow:0 0 4px #000; }
+  #prompt { position:absolute; top:56%; left:50%; transform:translateX(-50%); font-size:14px; letter-spacing:2px; color:#e0dac6; text-shadow:0 2px 5px #000; background:rgba(0,0,0,.35); padding:4px 12px; display:none; }
+
+  #subs { position:absolute; bottom:14%; left:50%; transform:translateX(-50%); width:70%; max-width:760px; text-align:center; font-family:Georgia, serif; font-style:italic; font-size:19px; line-height:1.5; color:#ddd6c2; text-shadow:0 2px 8px #000, 0 0 20px rgba(0,0,0,.9); opacity:0; transition:opacity .5s; }
+  #subs.whisper { font-size:15px; color:#9b93a8; letter-spacing:3px; }
+
+  #vig { position:fixed; inset:0; pointer-events:none; z-index:4;
+    background:radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,.55) 100%); }
+  #red { position:fixed; inset:0; pointer-events:none; z-index:6; background:#4a0505; opacity:0; transition:opacity .25s; mix-blend-mode:multiply; }
+  #fade { position:fixed; inset:0; pointer-events:none; z-index:7; background:#000; opacity:0; transition:opacity .9s; }
+  #slits { position:fixed; inset:0; pointer-events:none; z-index:6; display:none;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,.96) 0 9vh, rgba(0,0,0,0) 9vh 13vh),
+      radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.9) 85%); }
+
+  .ov { position:fixed; inset:0; z-index:10; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(2,2,4,.93); text-align:center; pointer-events:auto; }
+  .ov.show { display:flex; }
+  .ov h1 { font-family:Georgia, serif; font-weight:normal; color:#d8d2c0; }
+
+  #title h1 { font-size:76px; letter-spacing:38px; text-indent:38px; margin-bottom:6px; text-shadow:0 0 30px rgba(120,110,80,.35); }
+  #title .sub { font-size:14px; letter-spacing:6px; opacity:.7; margin-bottom:26px; }
+  #title .tag { font-family:Georgia, serif; font-style:italic; font-size:17px; color:#a8a190; margin-bottom:34px; }
+  #title .controls { font-size:12px; letter-spacing:2px; line-height:2; opacity:.6; margin-bottom:36px; }
+  #title .begin { font-size:16px; letter-spacing:8px; color:#e0dac6; animation:pulse 1.8s infinite; cursor:pointer; }
+  #title .hp { font-size:11px; opacity:.4; margin-top:20px; letter-spacing:2px; }
+
+  #pause h1 { font-size:34px; letter-spacing:14px; }
+  #pause .sub { margin-top:16px; font-size:13px; letter-spacing:4px; opacity:.6; animation:pulse 1.8s infinite; }
+
+  #death { background:rgba(8,1,1,.95); }
+  #death h1 { font-size:46px; letter-spacing:16px; color:#8f2a22; margin-bottom:18px; }
+  #deathline { font-family:Georgia, serif; font-style:italic; font-size:19px; color:#b3a894; margin-bottom:10px; max-width:520px; line-height:1.6; }
+  #deathstats { font-size:13px; letter-spacing:3px; opacity:.55; margin-bottom:30px; }
+  #death .sub, #win .sub { font-size:13px; letter-spacing:4px; opacity:.7; animation:pulse 1.8s infinite; }
+
+  #win h1 { font-size:44px; letter-spacing:14px; color:#c9c2a8; margin-bottom:18px; }
+  #winline { font-family:Georgia, serif; font-style:italic; font-size:19px; color:#b3ad98; max-width:560px; line-height:1.7; margin-bottom:14px; }
+  #winstats { font-size:13px; letter-spacing:3px; opacity:.55; margin-bottom:30px; }
+
+  #note { background:rgba(0,0,0,.75); }
+  #notepaper { background:#d8cdae; color:#2c261c; max-width:440px; padding:38px 42px; font-family:Georgia, serif; box-shadow:0 12px 60px #000; transform:rotate(-.6deg); }
+  #notetitle { font-size:13px; letter-spacing:4px; margin-bottom:16px; opacity:.6; text-transform:uppercase; }
+  #notebody { font-style:italic; font-size:17px; line-height:1.7; white-space:pre-line; text-align:left; }
+  #note .sub { margin-top:22px; font-size:12px; letter-spacing:3px; opacity:.6; color:#cfc9b8; }
+
+  #cine { background:#000; }
+  #cineline { font-family:Georgia, serif; font-style:italic; font-size:26px; color:#cfc8b2; max-width:640px; line-height:1.7; opacity:0; transition:opacity .8s; padding:0 20px; }
+</style>
+</head>
+<body>
+<div class="hud">
+  <div id="topleft">
+    <div id="day">DAY 1</div>
+    <div id="phase">MORNING</div>
+    <div id="obj">Survive 30 nights.</div>
+  </div>
+  <div id="topright">
+    <div id="batlabel">FLASHLIGHT [F]</div>
+    <div id="batwrap"><div id="bat"></div></div>
+    <div id="tal">✶ TALISMANS — 1</div>
+    <div id="stn">● STONES — 2</div>
+  </div>
+  <div id="stamwrap"><div id="stam"></div></div>
+  <div id="breathwrap">
+    <div id="breathlabel">HOLD [SPACE] — DON'T BREATHE</div>
+    <div id="breathbar"><div id="breath"></div></div>
+  </div>
+  <div id="reticle"></div>
+  <div id="prompt"></div>
+  <div id="subs"></div>
+</div>
+<div id="vig"></div>
+<div id="red"></div>
+<div id="slits"></div>
+<div id="fade"></div>
+
+<div id="title" class="ov show">
+  <h1>F R O M</h1>
+  <div class="sub">N I G H T F A L L&nbsp;&nbsp;·&nbsp;&nbsp;A FAN-MADE TRIBUTE</div>
+  <div class="tag">Thirty nights. One town. The road out is the road in.</div>
+  <div class="controls">
+    WASD — MOVE&nbsp;&nbsp;·&nbsp;&nbsp;MOUSE — LOOK&nbsp;&nbsp;·&nbsp;&nbsp;SHIFT — RUN&nbsp;&nbsp;·&nbsp;&nbsp;C — CROUCH<br>
+    E — INTERACT / HIDE&nbsp;&nbsp;·&nbsp;&nbsp;F — FLASHLIGHT&nbsp;&nbsp;·&nbsp;&nbsp;T — HANG TALISMAN&nbsp;&nbsp;·&nbsp;&nbsp;Q — THROW STONE<br>
+    SPACE — HOLD BREATH (while hiding)
+  </div>
+  <div class="begin">CLICK TO BEGIN</div>
+  <div class="hp">HEADPHONES RECOMMENDED · THEY ONLY WALK. THEY NEVER STOP.</div>
+</div>
+
+<div id="pause" class="ov">
+  <h1>PAUSED</h1>
+  <div class="sub">CLICK TO CONTINUE</div>
+</div>
+
+<div id="death" class="ov">
+  <h1>YOU WERE TAKEN</h1>
+  <div id="deathline"></div>
+  <div id="deathstats"></div>
+  <div class="sub">PRESS ENTER</div>
+</div>
+
+<div id="win" class="ov">
+  <h1>DAY 30 — DAWN</h1>
+  <div id="winline"></div>
+  <div id="winstats"></div>
+  <div class="sub">PRESS ENTER</div>
+</div>
+
+<div id="note" class="ov">
+  <div id="notepaper">
+    <div id="notetitle"></div>
+    <div id="notebody"></div>
+  </div>
+  <div class="sub">[E] PUT IT DOWN</div>
+</div>
+
+<div id="cine" class="ov">
+  <div id="cineline"></div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+<script type="module">import('./game.js?ts='+Date.now());</script>
+</body>
+</html>

@@ -6,6 +6,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "5173"],
       "port": 5173
+    },
+    {
+      "name": "from-game",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "from-game"],
+      "port": 4173
     }
   ]
 }
