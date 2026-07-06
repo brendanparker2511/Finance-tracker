@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brendan Parker — Freelance Web Developer</title>
+<meta name="description" content="Brendan Parker is a freelance web developer building fast, modern websites for businesses that want to look serious online.">
+<meta property="og:title" content="Brendan Parker — Freelance Web Developer">
+<meta property="og:description" content="Fast, modern websites that make your business impossible to ignore.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0b'/%3E%3Ctext x='32' y='43' font-family='sans-serif' font-size='30' font-weight='700' fill='%23d4ff3f' text-anchor='middle'%3EBP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --bg-raised: #121214;
+    --bg-card: #151518;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.18);
+    --text: #f4f4f5;
+    --text-dim: #9d9da6;
+    --text-faint: #66666e;
+    --accent: #d4ff3f;
+    --accent-dim: rgba(212, 255, 63, 0.12);
+    --font-display: "Space Grotesk", sans-serif;
+    --font-body: "Inter", sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: var(--accent); color: #0a0a0b; }
+
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .badge .dot { animation: none; }
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(10, 10, 11, 0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo span { color: var(--accent); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--accent);
+    color: #0a0a0b !important;
+    padding: 8px 18px;
+    border-radius: 99px;
+    font-weight: 600 !important;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .nav-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(212, 255, 63, 0.35);
+  }
+
+  /* ---------- Hero ---------- */
+  header {
+    position: relative;
+    padding: 180px 0 120px;
+  }
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 20%, transparent 70%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 20%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-glow {
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 600px;
+    background: radial-gradient(ellipse at center, rgba(212, 255, 63, 0.07) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+  }
+  .badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px rgba(212, 255, 63, 0.8);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(44px, 7.5vw, 84px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    max-width: 850px;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero-sub {
+    margin-top: 28px;
+    font-size: clamp(17px, 2.2vw, 20px);
+    color: var(--text-dim);
+    max-width: 560px;
+    line-height: 1.65;
+  }
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 44px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #0a0a0b;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+    padding: 15px 30px;
+    border-radius: 99px;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(212, 255, 63, 0.35);
+  }
+  .btn-primary svg { transition: transform 0.2s; }
+  .btn-primary:hover svg { transform: translateX(3px); }
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 16px;
+    padding: 15px 26px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+  }
+
+  /* ---------- Sections ---------- */
+  section { padding: 100px 0; scroll-margin-top: 56px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 56px;
+    flex-wrap: wrap;
+  }
+  .kicker {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 4.5vw, 46px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .section-note {
+    color: var(--text-faint);
+    font-size: 15px;
+    max-width: 340px;
+  }
+
+  /* ---------- What I make ---------- */
+  .services {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .service {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 34px 30px;
+    transition: border-color 0.25s, transform 0.25s;
+  }
+  .service:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+  }
+  .service-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .service-icon svg { stroke: var(--accent); }
+  .service h3 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .service p {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ---------- Work ---------- */
+  #work { padding-top: 40px; }
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .work-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.25s, transform 0.25s;
+    display: flex;
+    flex-direction: column;
+  }
+  .work-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-4px);
+  }
+  .work-thumb {
+    aspect-ratio: 4 / 3;
+    position: relative;
+    overflow: hidden;
+  }
+  .work-thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(10,10,11,0.35), transparent 55%);
+  }
+  .thumb-1 { background: linear-gradient(135deg, #1c2a10 0%, #33470f 45%, #d4ff3f 160%); }
+  .thumb-2 { background: linear-gradient(135deg, #101c2a 0%, #14364d 50%, #3fc7ff 175%); }
+  .thumb-3 { background: linear-gradient(135deg, #241028 0%, #46164d 50%, #e03fff 180%); }
+  .thumb-mark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 56px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.22);
+    letter-spacing: -0.02em;
+  }
+  .work-body {
+    padding: 24px 26px 28px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .work-tag {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .work-body h3 {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  .work-body p {
+    color: var(--text-dim);
+    font-size: 14.5px;
+    line-height: 1.6;
+    flex: 1;
+  }
+  .work-result {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .work-result svg { stroke: var(--accent); flex-shrink: 0; }
+
+  /* ---------- About ---------- */
+  #about .about-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 64px;
+    align-items: start;
+  }
+  .about-copy p {
+    color: var(--text-dim);
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  .about-copy p + p { margin-top: 20px; }
+  .about-copy strong { color: var(--text); font-weight: 600; }
+  .facts {
+    display: grid;
+    gap: 14px;
+  }
+  .fact {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .fact-num {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 74px;
+    letter-spacing: -0.02em;
+  }
+  .fact-label {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  /* ---------- CTA ---------- */
+  #contact {
+    padding: 40px 0 120px;
+  }
+  .cta-panel {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 90px 40px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .cta-glow {
+    position: absolute;
+    bottom: -240px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 400px;
+    background: radial-gradient(ellipse at center, rgba(212, 255, 63, 0.13) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .cta-panel h2 {
+    font-size: clamp(34px, 5.5vw, 58px);
+    max-width: 640px;
+    margin: 0 auto 20px;
+  }
+  .cta-panel p {
+    color: var(--text-dim);
+    font-size: 17px;
+    max-width: 460px;
+    margin: 0 auto 40px;
+  }
+  .cta-email {
+    margin-top: 26px;
+    font-size: 14px;
+    color: var(--text-faint);
+  }
+  .cta-email a {
+    color: var(--text-dim);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s;
+  }
+  .cta-email a:hover { color: var(--accent); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+  }
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    color: var(--text-faint);
+    font-size: 13.5px;
+  }
+  .footer-inner a {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-inner a:hover { color: var(--accent); }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .services, .work-grid { grid-template-columns: 1fr; }
+    #about .about-grid { grid-template-columns: 1fr; gap: 40px; }
+    header { padding: 140px 0 80px; }
+    section { padding: 72px 0; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .cta-panel { padding: 64px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <a class="logo" href="#top">BP<span>.</span></a>
+    <div class="nav-links">
+      <a href="#make">What I make</a>
+      <a href="#work">Work</a>
+      <a href="#about">About</a>
+      <a class="nav-cta" href="mailto:brendan.parker2511@gmail.com?subject=Website%20project">Get in touch</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span>Available for new projects</div>
+    <h1>Websites that make your business <em>impossible to ignore.</em></h1>
+    <p class="hero-sub">I'm Brendan Parker, a freelance web developer. I design and build fast, modern websites for businesses that want to look as good online as they are in person.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="mailto:brendan.parker2511@gmail.com?subject=Website%20project">
+        Start your project
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a class="btn-ghost" href="#work">See my work</a>
+    </div>
+  </div>
+</header>
+
+<section id="make">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <div class="kicker">What I make</div>
+        <h2>One developer.<br>Everything handled.</h2>
+      </div>
+      <p class="section-note">No agencies, no handoffs, no waiting weeks for a reply. You work directly with the person building your site.</p>
+    </div>
+    <div class="services">
+      <div class="service reveal">
+        <div class="service-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M2 9h20M6 20h12"/></svg>
+        </div>
+        <h3>Marketing sites &amp; landing pages</h3>
+        <p>Sharp, fast-loading pages built to turn visitors into customers. Designed around your brand, written to convert, live in days — not months.</p>
+      </div>
+      <div class="service reveal">
+        <div class="service-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
+        </div>
+        <h3>Web apps &amp; dashboards</h3>
+        <p>Custom tools that do exactly what your business needs — booking systems, client portals, internal dashboards. If you can describe it, I can build it.</p>
+      </div>
+      <div class="service reveal">
+        <div class="service-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h8l-1 8 11-13h-8l0-7z"/></svg>
+        </div>
+        <h3>Redesigns &amp; speed-ups</h3>
+        <p>Already have a site that's slow, dated, or embarrassing on mobile? I'll rebuild it into something you're proud to put on a business card.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="work">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <div class="kicker">Selected work</div>
+        <h2>Built to work.<br>Designed to sell.</h2>
+      </div>
+    </div>
+    <div class="work-grid">
+      <!-- PROJECT 1 — replace title, tag, description, result, and thumbnail -->
+      <a class="work-card reveal" href="#contact">
+        <div class="work-thumb thumb-1"><div class="thumb-mark">01</div></div>
+        <div class="work-body">
+          <div class="work-tag">Marketing site</div>
+          <h3>Project Name</h3>
+          <p>One or two lines on what you built and who it was for — the problem the client had, and what you shipped.</p>
+          <div class="work-result">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
+            The headline result, e.g. "2× more enquiries"
+          </div>
+        </div>
+      </a>
+      <!-- PROJECT 2 -->
+      <a class="work-card reveal" href="#contact">
+        <div class="work-thumb thumb-2"><div class="thumb-mark">02</div></div>
+        <div class="work-body">
+          <div class="work-tag">Web app</div>
+          <h3>Project Name</h3>
+          <p>One or two lines on what you built and who it was for — the problem the client had, and what you shipped.</p>
+          <div class="work-result">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
+            The headline result, e.g. "Saves 10 hrs/week"
+          </div>
+        </div>
+      </a>
+      <!-- PROJECT 3 -->
+      <a class="work-card reveal" href="#contact">
+        <div class="work-thumb thumb-3"><div class="thumb-mark">03</div></div>
+        <div class="work-body">
+          <div class="work-tag">Redesign</div>
+          <h3>Project Name</h3>
+          <p>One or two lines on what you built and who it was for — the problem the client had, and what you shipped.</p>
+          <div class="work-result">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-6"/></svg>
+            The headline result, e.g. "Load time cut 80%"
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div>
+        <div class="kicker">About</div>
+        <h2>Who you're working with</h2>
+      </div>
+    </div>
+    <div class="about-grid">
+      <div class="about-copy reveal">
+        <p>I'm Brendan — a web developer who believes a website should be an <strong>asset, not a chore</strong>. Too many businesses are stuck with sites that are slow, dated, or built by an agency that vanished after launch.</p>
+        <p>I work differently. <strong>You deal with me directly</strong>, from first conversation to launch and beyond. I keep the process simple, I ship fast, and I build everything by hand — no bloated templates, no page builders, no mystery.</p>
+        <p>If you want a website that loads instantly, looks sharp on every device, and actually brings in business, we should talk.</p>
+      </div>
+      <div class="facts">
+        <div class="fact reveal">
+          <div class="fact-num">100%</div>
+          <div class="fact-label">Hand-built code — no bloated templates or page builders</div>
+        </div>
+        <div class="fact reveal">
+          <div class="fact-num">Days</div>
+          <div class="fact-label">Typical turnaround for a landing page, not months</div>
+        </div>
+        <div class="fact reveal">
+          <div class="fact-num">1:1</div>
+          <div class="fact-label">You work directly with the developer — no middlemen</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap">
+    <div class="cta-panel reveal">
+      <div class="cta-glow"></div>
+      <div class="kicker">Let's talk</div>
+      <h2>Got a project in mind?</h2>
+      <p>Tell me what you're trying to build — or what's broken. I'll reply within one business day with honest advice and a clear next step.</p>
+      <a class="btn-primary" href="mailto:brendan.parker2511@gmail.com?subject=Website%20project">
+        Email me about your project
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <div class="cta-email">or write to <a href="mailto:brendan.parker2511@gmail.com">brendan.parker2511@gmail.com</a></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div>© <span id="year"></span> Brendan Parker</div>
+    <div>Designed &amp; built by hand — <a href="mailto:brendan.parker2511@gmail.com">brendan.parker2511@gmail.com</a></div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById("year").textContent = new Date().getFullYear();
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll(".reveal").forEach((el, i) => {
+    el.style.transitionDelay = `${(i % 3) * 80}ms`;
+    observer.observe(el);
+  });
+</script>
+
+</body>
+</html>
