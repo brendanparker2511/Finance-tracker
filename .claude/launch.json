@@ -18,6 +18,18 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "4180", "--directory", "personal-site"],
       "port": 4180
+    },
+    {
+      "name": "hyrox-prep",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4190", "--directory", "hyrox-prep"],
+      "port": 4190
+    },
+    {
+      "name": "fitness-app",
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "export PATH=\"$HOME/.nvm/versions/node/v24.18.0/bin:$PATH\" && cd /Users/brendan/Claude/fitness-app && npm run dev -- --port 5199 --strictPort"],
+      "port": 5199
     }
   ]
 }

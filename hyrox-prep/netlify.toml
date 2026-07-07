@@ -1,0 +1,11 @@
+# Netlify — static site, no build step. Deploy the hyrox-prep folder as the
+# publish directory (or drag-and-drop this folder into Netlify).
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
