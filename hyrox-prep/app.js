@@ -7,7 +7,7 @@
   // your product → enable "Generate a unique license key per sale" → Gumroad
   // shows a verification code snippet that contains this ID. It looks like a
   // long token, e.g. "z9fkq-abc123...". Paste it here before you go live.
-  const GUMROAD_PRODUCT_ID = "YOUR_GUMROAD_PRODUCT_ID";
+  const GUMROAD_PRODUCT_ID = "2h2BeVnyM0FrtQugNyyNGg==";
   const VERIFY_URL = "https://api.gumroad.com/v2/licenses/verify";
 
   const TOTAL = DAYS.length;           // 30
