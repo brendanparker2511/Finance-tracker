@@ -3,10 +3,17 @@
   "use strict";
 
   // ---- Config ----
-  const PASSCODE = "HYROX30";          // change to your Gumroad/Stan buyer code
+  // Your Gumroad PRODUCT ID (not the permalink). To find it: in Gumroad, edit
+  // your product → enable "Generate a unique license key per sale" → Gumroad
+  // shows a verification code snippet that contains this ID. It looks like a
+  // long token, e.g. "z9fkq-abc123...". Paste it here before you go live.
+  const GUMROAD_PRODUCT_ID = "YOUR_GUMROAD_PRODUCT_ID";
+  const VERIFY_URL = "https://api.gumroad.com/v2/licenses/verify";
+
   const TOTAL = DAYS.length;           // 30
   const LS = {
     unlocked: "hx_unlocked",
+    license:  "hx_license",
     done:     "hx_done",
     level:    "hx_level",
     race:     "hx_racedate",
@@ -20,8 +27,10 @@
     setLevel(l) { localStorage.setItem(LS.level, l); },
     getRace() { return localStorage.getItem(LS.race) || ""; },
     setRace(d) { localStorage.setItem(LS.race, d); },
+    getLicense() { return localStorage.getItem(LS.license) || ""; },
     isUnlocked() { return localStorage.getItem(LS.unlocked) === "1"; },
-    unlock() { localStorage.setItem(LS.unlocked, "1"); },
+    unlock(key) { localStorage.setItem(LS.unlocked, "1"); if (key) localStorage.setItem(LS.license, key); },
+    lock() { localStorage.removeItem(LS.unlocked); localStorage.removeItem(LS.license); },
   };
 
   let level = store.getLevel();
@@ -49,30 +58,108 @@
   const completedCount = () => store.getDone().filter(d => d >= 1 && d <= TOTAL).length;
 
   /* =======================================================
-     GATE
+     GATE — Gumroad license verification (no backend)
   ======================================================= */
+
+  // Verify a license key against Gumroad. Returns { ok, reason, purchase }.
+  // reason: "invalid" (bad key) | "refunded" | "cancelled" | "server" (transient)
+  async function verifyLicense(key, increment) {
+    const body = new URLSearchParams({
+      product_id: GUMROAD_PRODUCT_ID,
+      license_key: key,
+      increment_uses_count: increment ? "true" : "false",
+    });
+    const res = await fetch(VERIFY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!res.ok) return { ok: false, reason: res.status >= 500 ? "server" : "invalid" };
+    const data = await res.json().catch(() => ({}));
+    if (!data.success) return { ok: false, reason: "invalid" };
+    const p = data.purchase || {};
+    if (p.refunded || p.chargebacked || p.disputed) return { ok: false, reason: "refunded" };
+    if (p.subscription_cancelled_at || p.subscription_ended_at || p.subscription_failed_at)
+      return { ok: false, reason: "cancelled" };
+    return { ok: true, purchase: p };
+  }
+
+  const REASON_MSG = {
+    invalid:  "Invalid license key. Copy it exactly from your Gumroad receipt.",
+    refunded: "This purchase was refunded or disputed — access is closed.",
+    cancelled:"This subscription is no longer active.",
+    server:   "License server is busy. Give it a moment and try again.",
+  };
+
   function renderGate() {
     const gate = $("#gate");
     gate.classList.remove("hidden");
     const form = $("#gate-form");
     const err = $("#gate-error");
-    form.addEventListener("submit", (e) => {
+    const input = $("#gate-input");
+    const btn = form.querySelector(".btn");
+
+    // Dev-only preview unlock. Rendered on localhost ONLY — never on your live
+    // site — so you can click through the app without a real key while testing.
+    if (isDevHost()) {
+      const dev = el("button", "gate-dev", "Dev preview (localhost only)");
+      dev.type = "button";
+      dev.addEventListener("click", () => { store.unlock(); enterApp(gate); });
+      form.appendChild(dev);
+    }
+
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const val = $("#gate-input").value.trim().toUpperCase();
-      if (val === PASSCODE) {
-        store.unlock();
-        gate.style.opacity = "0";
-        gate.style.transition = "opacity .35s";
-        setTimeout(() => { gate.classList.add("hidden"); boot(); }, 350);
-      } else {
-        err.textContent = "Incorrect code. Check your purchase email.";
-        $("#gate-input").value = "";
-        form.animate(
-          [{ transform: "translateX(0)" }, { transform: "translateX(-8px)" }, { transform: "translateX(8px)" }, { transform: "translateX(0)" }],
-          { duration: 260 }
-        );
+      const key = input.value.trim();
+      if (!key) return;
+      if (GUMROAD_PRODUCT_ID === "YOUR_GUMROAD_PRODUCT_ID") {
+        err.textContent = "Setup needed — add your Gumroad product ID in app.js.";
+        return;
+      }
+      err.textContent = "";
+      btn.disabled = true;
+      btn.textContent = "Checking…";
+      try {
+        const r = await verifyLicense(key, true);
+        if (r.ok) { store.unlock(key); enterApp(gate); return; }
+        err.textContent = REASON_MSG[r.reason] || REASON_MSG.invalid;
+        shake(form);
+      } catch (_) {
+        err.textContent = "Couldn't reach the license server. Check your connection.";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Unlock";
       }
     });
+  }
+
+  function enterApp(gate) {
+    gate.style.opacity = "0";
+    gate.style.transition = "opacity .35s";
+    setTimeout(() => { gate.classList.add("hidden"); boot(); }, 350);
+  }
+
+  function shake(node) {
+    node.animate(
+      [{ transform: "translateX(0)" }, { transform: "translateX(-8px)" }, { transform: "translateX(8px)" }, { transform: "translateX(0)" }],
+      { duration: 260 }
+    );
+  }
+
+  function isDevHost() {
+    const h = location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "0.0.0.0" || h.endsWith(".local") || h === "";
+  }
+
+  // Silent re-check on load: catches refunds/disputes without blocking offline
+  // (gym) use. Only re-locks on a definitive negative, never a network hiccup.
+  async function revalidate() {
+    const key = store.getLicense();
+    if (!key || GUMROAD_PRODUCT_ID === "YOUR_GUMROAD_PRODUCT_ID" || !navigator.onLine) return;
+    try {
+      const r = await verifyLicense(key, false);
+      if (!r.ok && r.reason !== "server") { store.lock(); location.reload(); }
+    } catch (_) { /* offline / transient — keep access */ }
   }
 
   /* =======================================================
@@ -393,7 +480,7 @@
   ======================================================= */
   document.addEventListener("DOMContentLoaded", () => {
     wire();
-    if (store.isUnlocked()) { $("#gate").classList.add("hidden"); boot(); }
+    if (store.isUnlocked()) { $("#gate").classList.add("hidden"); boot(); revalidate(); }
     else renderGate();
   });
 })();

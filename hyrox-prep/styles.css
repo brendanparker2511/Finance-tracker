@@ -97,6 +97,10 @@ input::placeholder { color: var(--txt-faint); }
 }
 .btn:active { transform: scale(0.97); }
 .btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+
+.gate-dev { background: transparent; color: var(--txt-faint); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; margin-top: 2px; }
+.gate-dev:hover { color: var(--txt-dim); }
 .btn-ghost {
   background: transparent; color: var(--txt-dim);
   border: 1px solid var(--line-2); text-transform: none;
