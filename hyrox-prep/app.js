@@ -91,6 +91,22 @@
     server:   "License server is busy. Give it a moment and try again.",
   };
 
+  // Pull a license key out of the URL (?key= / ?license= / ?license_key= or the
+  // same in the #hash). Lets a redirect or automation hand the key straight to
+  // the app. Inert with plain Gumroad, but ready if a key ever rides in.
+  function readKeyFromUrl() {
+    const grab = (s) => {
+      const p = new URLSearchParams(s);
+      return p.get("key") || p.get("license") || p.get("license_key") || "";
+    };
+    const k = grab(location.search) || grab(location.hash.replace(/^#/, ""));
+    return k ? k.trim() : "";
+  }
+  // Remove the key from the address bar / history once we've read it.
+  function stripKeyFromUrl() {
+    try { history.replaceState(null, "", location.pathname); } catch (_) {}
+  }
+
   function renderGate() {
     const gate = $("#gate");
     gate.classList.remove("hidden");
@@ -98,24 +114,16 @@
     const err = $("#gate-error");
     const input = $("#gate-input");
     const btn = form.querySelector(".btn");
+    let busy = false;
 
-    // Dev-only preview unlock. Rendered on localhost ONLY — never on your live
-    // site — so you can click through the app without a real key while testing.
-    if (isDevHost()) {
-      const dev = el("button", "gate-dev", "Dev preview (localhost only)");
-      dev.type = "button";
-      dev.addEventListener("click", () => { store.unlock(); enterApp(gate); });
-      form.appendChild(dev);
-    }
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    async function attemptUnlock() {
       const key = input.value.trim();
-      if (!key) return;
+      if (!key || busy) return;
       if (GUMROAD_PRODUCT_ID === "YOUR_GUMROAD_PRODUCT_ID") {
         err.textContent = "Setup needed — add your Gumroad product ID in app.js.";
         return;
       }
+      busy = true;
       err.textContent = "";
       btn.disabled = true;
       btn.textContent = "Checking…";
@@ -127,10 +135,43 @@
       } catch (_) {
         err.textContent = "Couldn't reach the license server. Check your connection.";
       } finally {
+        busy = false;
         btn.disabled = false;
         btn.textContent = "Unlock";
       }
-    });
+    }
+
+    form.addEventListener("submit", (e) => { e.preventDefault(); attemptUnlock(); });
+    // Auto-verify the moment they paste a key in.
+    input.addEventListener("paste", () => setTimeout(() => { if (input.value.trim()) attemptUnlock(); }, 30));
+
+    // One-tap "paste my key" — reads the key they copied from the Gumroad
+    // receipt and verifies it. Shown only where the clipboard API exists.
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      const paste = el("button", "btn btn-ghost gate-paste", "Paste my key");
+      paste.type = "button";
+      paste.addEventListener("click", async () => {
+        try {
+          const t = (await navigator.clipboard.readText()).trim();
+          if (t) { input.value = t; attemptUnlock(); }
+          else err.textContent = "Clipboard is empty — copy your key first.";
+        } catch (_) { err.textContent = "Couldn't read clipboard — paste your key manually."; }
+      });
+      form.appendChild(paste);
+    }
+
+    // Dev-only preview unlock. Rendered on localhost ONLY — never on your live
+    // site — so you can click through the app without a real key while testing.
+    if (isDevHost()) {
+      const dev = el("button", "gate-dev", "Dev preview (localhost only)");
+      dev.type = "button";
+      dev.addEventListener("click", () => { store.unlock(); enterApp(gate); });
+      form.appendChild(dev);
+    }
+
+    // If a key came in on the URL, fill it, clean the URL, and verify.
+    const urlKey = readKeyFromUrl();
+    if (urlKey) { input.value = urlKey; stripKeyFromUrl(); attemptUnlock(); }
   }
 
   function enterApp(gate) {

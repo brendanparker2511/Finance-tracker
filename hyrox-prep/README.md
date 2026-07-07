@@ -31,6 +31,20 @@ from the browser (`api.gumroad.com/v2/licenses/verify`, which allows CORS).
 - A "Dev preview" link appears on `localhost` only (never on your live domain)
    so you can click through the app without a key while testing.
 
+**Smoothing the buyer's first open (optional but recommended):**
+1. In Gumroad, edit your product → Content → **"Redirect to a URL after
+   purchase"** → paste your app's URL. Buyers now land in the app automatically.
+2. The gate gives them the fastest way in:
+   - **"Paste my key"** — one tap, reads the key they copied from the receipt.
+   - Pasting the key into the field **auto-verifies** (no button press needed).
+   - Note: Gumroad's redirect passes `sale_id`/`product_id`, **not** the license
+     key, so the buyer still supplies the key once (copy + one tap). Turning a
+     sale ID into an unlock would require a backend.
+3. **Advanced / automation:** the app also reads a key from the URL —
+   `yourapp.com/?key=THE-KEY` (or `#key=THE-KEY`) — auto-verifies it, then strips
+   it from the address bar. Use this if you wire up a tool (Zapier, a custom
+   email link, etc.) that can inject each buyer's key. Inert with plain Gumroad.
+
 > Note: like any client-side gate, a determined technical user could extract the
 > content from the page source. License keys tie access to a real payment and
 > stop casual sharing — the right trade-off for a no-backend product.
