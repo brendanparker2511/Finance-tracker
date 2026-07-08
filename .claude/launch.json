@@ -9,9 +9,10 @@
     },
     {
       "name": "from-game",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "from-game"],
-      "port": 4173
+      "runtimeExecutable": "/bin/zsh",
+      "runtimeArgs": ["-c", "python3 -m http.server \"${PORT:-4173}\" --directory from-game"],
+      "port": 4173,
+      "autoPort": true
     },
     {
       "name": "personal-site",
@@ -22,7 +23,7 @@
     {
       "name": "hyrox-prep",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4190", "--directory", "hyrox-prep"],
+      "runtimeArgs": ["-m", "http.server", "4190", "--directory", "/Users/brendan/Claude/hyrox-prep"],
       "port": 4190
     },
     {
